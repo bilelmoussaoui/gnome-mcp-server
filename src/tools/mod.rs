@@ -1,4 +1,5 @@
 pub mod applications;
+pub mod audio;
 pub mod notifications;
 pub mod open_file;
 pub mod wallpaper;
@@ -11,6 +12,8 @@ pub fn list_tools() -> Vec<ToolDefinition> {
         applications::get_tool_definition(),
         open_file::get_tool_definition(),
         wallpaper::get_tool_definition(),
+        audio::get_volume_tool_definition(),
+        audio::get_media_tool_definition(),
     ]
 }
 
@@ -23,6 +26,8 @@ pub async fn execute_tool(
         "launch_application" => applications::execute(arguments).await,
         "open_file" => open_file::execute(arguments).await,
         "set_wallpaper" => wallpaper::execute(arguments).await,
+        "set_volume" => audio::execute_volume(arguments).await,
+        "media_control" => audio::execute_media_control(arguments).await,
         _ => Err(anyhow::anyhow!("Tool not found: {}", name)),
     }
 }
