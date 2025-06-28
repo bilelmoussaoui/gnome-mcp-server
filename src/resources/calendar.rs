@@ -1,80 +1,10 @@
-use crate::mcp::{Resource, ResourceContent};
+use crate::{
+    gnome::evolution::SourceType,
+    mcp::{Resource, ResourceContent},
+};
 use anyhow::Result;
-use gio::glib;
 use serde_json::json;
-use std::collections::HashMap;
-use zbus::{Connection, zvariant::OwnedObjectPath};
-
-#[derive(Debug)]
-#[allow(dead_code)]
-struct SourceInfo {
-    uid: String,
-    path: OwnedObjectPath,
-    display_name: String,
-    enabled: bool,
-    source_type: SourceType,
-}
-
-#[derive(Debug)]
-#[allow(dead_code)]
-enum SourceType {
-    Calendar { backend_name: String },
-    TaskList { backend_name: String },
-    AddressBook { backend_name: String },
-}
-
-fn parse_source_data(path: OwnedObjectPath, uid: String, data: &str) -> Option<SourceInfo> {
-    let key_file = glib::KeyFile::new();
-    key_file
-        .load_from_data(data, glib::KeyFileFlags::NONE)
-        .unwrap();
-
-    // Check if source is enabled
-    let enabled = key_file.boolean("Data Source", "Enabled").unwrap_or(false);
-    if !enabled {
-        println!("Source is disabled");
-        return None;
-    }
-
-    let display_name = key_file
-        .string("Data Source", "DisplayName")
-        .unwrap_or_else(|_| "Unknown".into());
-
-    // Check what type of source this is
-    let source_type = if key_file.has_group("Calendar") {
-        let backend_name = key_file
-            .string("Calendar", "BackendName")
-            .unwrap_or_else(|_| "unknown".into());
-        SourceType::Calendar {
-            backend_name: backend_name.to_string(),
-        }
-    } else if key_file.has_group("Task List") {
-        let backend_name = key_file
-            .string("Task List", "BackendName")
-            .unwrap_or_else(|_| "unknown".into());
-        SourceType::TaskList {
-            backend_name: backend_name.to_string(),
-        }
-    } else if key_file.has_group("Address Book") {
-        let backend_name = key_file
-            .string("Address Book", "BackendName")
-            .unwrap_or_else(|_| "unknown".into());
-        SourceType::AddressBook {
-            backend_name: backend_name.to_string(),
-        }
-    } else {
-        println!("Unknown source type");
-        return None;
-    };
-
-    Some(SourceInfo {
-        uid,
-        path,
-        display_name: display_name.to_string(),
-        enabled,
-        source_type,
-    })
-}
+use zbus::Connection;
 
 pub fn get_resource() -> Resource {
     Resource {
@@ -104,14 +34,16 @@ pub async fn get_calendar_events() -> Result<Vec<serde_json::Value>> {
     let connection = Connection::session().await?;
 
     // Step 1: Get managed objects from SourceManager
-    let sources = get_evolution_sources(&connection).await?;
+    let sources = crate::gnome::evolution::get_evolution_sources(&connection).await?;
 
     // Step 2: Find calendar sources and get their events
     let mut all_events = Vec::new();
 
     for (_source_path, (info, _proxy)) in sources {
         if matches!(info.source_type, SourceType::Calendar { .. }) {
-            if let Ok(events) = get_calender_events_from_source(&connection, &info).await {
+            let (calendar_path, bus_name) =
+                crate::gnome::evolution::open_calendar_source(&connection, &info.uid).await?;
+            if let Ok(events) = get_calendar_objects(&connection, &calendar_path, &bus_name).await {
                 all_events.extend(events);
             }
         }
@@ -128,54 +60,6 @@ pub async fn get_calendar_events() -> Result<Vec<serde_json::Value>> {
     }
 
     Ok(all_events)
-}
-
-async fn get_evolution_sources(
-    connection: &Connection,
-) -> Result<HashMap<OwnedObjectPath, (SourceInfo, zbus::Proxy<'static>)>> {
-    let proxy = zbus::fdo::ObjectManagerProxy::builder(connection)
-        .destination("org.gnome.evolution.dataserver.Sources5")?
-        .path("/org/gnome/evolution/dataserver/SourceManager")?
-        .build()
-        .await?;
-    let mut sources = HashMap::new();
-
-    // Get all managed objects
-    let objects = proxy.get_managed_objects().await?;
-    for (object_path, _) in objects {
-        let proxy = zbus::Proxy::new(
-            connection,
-            "org.gnome.evolution.dataserver.Sources5",
-            object_path.clone(),
-            "org.gnome.evolution.dataserver.Source",
-        )
-        .await?;
-        let data = proxy.get_property::<String>("Data").await?;
-        let uid = proxy.get_property::<String>("UID").await?;
-
-        if let Some(source_info) = parse_source_data(object_path.clone(), uid, &data) {
-            sources.insert(object_path, (source_info, proxy));
-        }
-    }
-    Ok(sources)
-}
-
-async fn get_calender_events_from_source(
-    connection: &Connection,
-    info: &SourceInfo,
-) -> anyhow::Result<Vec<serde_json::Value>> {
-    // Try to get the calendar factory to open this source
-    let proxy = zbus::Proxy::new(
-        connection,
-        "org.gnome.evolution.dataserver.Calendar8",
-        "/org/gnome/evolution/dataserver/CalendarFactory",
-        "org.gnome.evolution.dataserver.CalendarFactory",
-    )
-    .await?;
-    // Try to open the calendar with this source UID
-    let response = proxy.call_method("OpenCalendar", &(&info.uid,)).await?;
-    let (calendar_path, bus_name) = response.body().deserialize::<(String, String)>()?;
-    get_calendar_objects(connection, &calendar_path, &bus_name).await
 }
 
 async fn get_calendar_objects(
