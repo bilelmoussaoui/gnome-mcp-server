@@ -1,7 +1,7 @@
-use crate::mcp::{ResourceContent, ResourceProvider};
 use anyhow::Result;
 use serde_json::json;
-use zbus::Connection;
+
+use crate::mcp::{ResourceContent, ResourceProvider};
 
 #[derive(Default)]
 pub struct SystemInfo;
@@ -12,7 +12,7 @@ impl ResourceProvider for SystemInfo {
     const DESCRIPTION: &'static str = "OS version, hardware specs, uptime";
 
     async fn get_content(&self) -> Result<ResourceContent> {
-        let connection = Connection::system().await?;
+        let connection = zbus::Connection::system().await?;
 
         let proxy = zbus::Proxy::new(
             &connection,

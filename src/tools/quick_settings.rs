@@ -1,8 +1,7 @@
-use crate::mcp::ToolProvider;
-use crate::tool_params;
 use anyhow::Result;
 use gio::prelude::*;
-use zbus::Connection;
+
+use crate::{mcp::ToolProvider, tool_params};
 
 #[derive(Default)]
 pub struct QuickSettings;
@@ -36,7 +35,7 @@ async fn execute_boolean_toggle(setting: &str, enabled: bool) -> Result<String> 
 }
 
 async fn toggle_wifi(enabled: bool) -> Result<String> {
-    let connection = Connection::system().await?;
+    let connection = zbus::Connection::system().await?;
 
     let nm_proxy = zbus::Proxy::new(
         &connection,
@@ -55,7 +54,7 @@ async fn toggle_wifi(enabled: bool) -> Result<String> {
 }
 
 async fn toggle_bluetooth(enabled: bool) -> Result<String> {
-    let connection = Connection::system().await?;
+    let connection = zbus::Connection::system().await?;
 
     let adapter_proxy = zbus::Proxy::new(
         &connection,

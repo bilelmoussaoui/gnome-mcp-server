@@ -1,7 +1,6 @@
-use crate::mcp::ToolProvider;
-use crate::tool_params;
 use anyhow::Result;
-use zbus::Connection;
+
+use crate::{mcp::ToolProvider, tool_params};
 
 #[derive(Default)]
 pub struct Volume;
@@ -122,7 +121,7 @@ async fn set_system_mute(mute: bool) -> Result<String> {
 }
 
 async fn control_media_playback(action: &str, player: Option<&str>) -> Result<String> {
-    let connection = Connection::session().await?;
+    let connection = zbus::Connection::session().await?;
 
     // Find available MPRIS players
     let players = find_mpris_players(&connection).await?;
@@ -181,7 +180,7 @@ async fn control_media_playback(action: &str, player: Option<&str>) -> Result<St
     }
 }
 
-async fn find_mpris_players(connection: &Connection) -> Result<Vec<String>> {
+async fn find_mpris_players(connection: &zbus::Connection) -> Result<Vec<String>> {
     let dbus_proxy = zbus::fdo::DBusProxy::new(connection).await?;
     let names = dbus_proxy.list_names().await?;
 

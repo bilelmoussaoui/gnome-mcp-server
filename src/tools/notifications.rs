@@ -1,7 +1,6 @@
-use crate::mcp::ToolProvider;
-use crate::tool_params;
 use anyhow::Result;
-use zbus::Connection;
+
+use crate::{mcp::ToolProvider, tool_params};
 
 #[derive(Default)]
 pub struct Notifications;
@@ -31,7 +30,7 @@ impl ToolProvider for Notifications {
 }
 
 async fn send_notification(summary: &str, body: &str, timeout: i64) -> Result<()> {
-    let connection = Connection::session().await?;
+    let connection = zbus::Connection::session().await?;
 
     let proxy = zbus::Proxy::new(
         &connection,

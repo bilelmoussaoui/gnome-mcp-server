@@ -1,10 +1,10 @@
-use crate::{
-    gnome::evolution::{SourceType, get_evolution_sources, open_task_list_source},
-    mcp::{ResourceContent, ResourceProvider},
-};
 use anyhow::Result;
 use serde_json::json;
-use zbus::Connection;
+
+use crate::{
+    gnome::evolution::{get_evolution_sources, open_task_list_source, SourceType},
+    mcp::{ResourceContent, ResourceProvider},
+};
 
 #[derive(Default)]
 pub struct Tasks;
@@ -31,7 +31,7 @@ impl ResourceProvider for Tasks {
 }
 
 pub async fn get_task_lists() -> Result<Vec<serde_json::Value>> {
-    let connection = Connection::session().await?;
+    let connection = zbus::Connection::session().await?;
     let sources = get_evolution_sources(&connection).await?;
     let mut all_tasks = Vec::new();
 
@@ -64,7 +64,7 @@ pub async fn get_task_lists() -> Result<Vec<serde_json::Value>> {
 }
 
 async fn get_task_objects(
-    connection: &Connection,
+    connection: &zbus::Connection,
     task_list_path: &str,
     bus_name: &str,
 ) -> Result<Vec<serde_json::Value>> {

@@ -1,10 +1,12 @@
-use crate::mcp::{ResourceProvider, ToolProvider};
-use anyhow::{Context, Result};
-use serde::{Deserialize, Serialize};
 use std::{
     path::{Path, PathBuf},
     sync::LazyLock,
 };
+
+use anyhow::{Context, Result};
+use serde::{Deserialize, Serialize};
+
+use crate::mcp::{ResourceProvider, ToolProvider};
 
 // Resource-specific configuration structs
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -260,7 +262,8 @@ mod tests {
     #[test]
     fn test_resource_enabled_default() {
         let config = Config::default();
-        // All resources should be enabled by default (no config file = everything enabled)
+        // All resources should be enabled by default (no config file = everything
+        // enabled)
         assert!(config.is_resource_enabled::<crate::resources::calendar::Calendar>());
         assert!(config.is_resource_enabled::<crate::resources::tasks::Tasks>());
         assert!(config.is_resource_enabled::<crate::resources::system_info::SystemInfo>());

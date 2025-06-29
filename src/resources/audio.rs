@@ -1,8 +1,9 @@
-use crate::mcp::{ResourceContent, ResourceProvider};
+use std::collections::HashMap;
+
 use anyhow::Result;
 use serde_json::json;
-use std::collections::HashMap;
-use zbus::Connection;
+
+use crate::mcp::{ResourceContent, ResourceProvider};
 
 #[derive(Default)]
 pub struct Audio;
@@ -25,7 +26,7 @@ impl ResourceProvider for Audio {
 }
 
 async fn get_audio_status() -> Result<serde_json::Value> {
-    let connection = Connection::session().await?;
+    let connection = zbus::Connection::session().await?;
 
     let mut status = json!({
         "volume": {},
@@ -78,7 +79,7 @@ async fn get_volume_status() -> Result<serde_json::Value> {
     }))
 }
 
-async fn get_media_status(connection: &Connection) -> Result<serde_json::Value> {
+async fn get_media_status(connection: &zbus::Connection) -> Result<serde_json::Value> {
     let players = find_mpris_players(connection).await?;
 
     if players.is_empty() {
@@ -106,7 +107,7 @@ async fn get_media_status(connection: &Connection) -> Result<serde_json::Value> 
     }))
 }
 
-async fn find_mpris_players(connection: &Connection) -> Result<Vec<String>> {
+async fn find_mpris_players(connection: &zbus::Connection) -> Result<Vec<String>> {
     let dbus_proxy = zbus::fdo::DBusProxy::new(connection).await?;
     let names = dbus_proxy.list_names().await?;
 
@@ -119,7 +120,7 @@ async fn find_mpris_players(connection: &Connection) -> Result<Vec<String>> {
     Ok(players)
 }
 
-async fn get_player_info(connection: &Connection, player: &str) -> Result<serde_json::Value> {
+async fn get_player_info(connection: &zbus::Connection, player: &str) -> Result<serde_json::Value> {
     let player_proxy = zbus::Proxy::new(
         connection,
         player,

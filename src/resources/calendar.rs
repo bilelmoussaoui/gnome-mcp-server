@@ -1,10 +1,10 @@
+use anyhow::Result;
+use serde_json::json;
+
 use crate::{
     gnome::evolution::SourceType,
     mcp::{ResourceContent, ResourceProvider},
 };
-use anyhow::Result;
-use serde_json::json;
-use zbus::Connection;
 
 #[derive(Default)]
 pub struct Calendar;
@@ -31,7 +31,7 @@ impl ResourceProvider for Calendar {
 }
 
 pub async fn get_calendar_events() -> Result<Vec<serde_json::Value>> {
-    let connection = Connection::session().await?;
+    let connection = zbus::Connection::session().await?;
 
     // Step 1: Get managed objects from SourceManager
     let sources = crate::gnome::evolution::get_evolution_sources(&connection).await?;
@@ -63,7 +63,7 @@ pub async fn get_calendar_events() -> Result<Vec<serde_json::Value>> {
 }
 
 async fn get_calendar_objects(
-    connection: &Connection,
+    connection: &zbus::Connection,
     calendar_path: &str,
     bus_name: &str,
 ) -> Result<Vec<serde_json::Value>> {

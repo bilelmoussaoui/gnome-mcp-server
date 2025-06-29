@@ -1,7 +1,8 @@
-use crate::mcp::{ResourceContent, ResourceProvider};
 use anyhow::Result;
 use gio::prelude::*;
 use serde_json::json;
+
+use crate::mcp::{ResourceContent, ResourceProvider};
 
 #[derive(Default)]
 pub struct Applications;

@@ -1,8 +1,8 @@
-use crate::mcp::macros::register_providers;
-use crate::mcp::{Request, ResourceProvider, Response, ToolProvider};
 use anyhow::Result;
 use serde_json::json;
 use tokio::io::{self, AsyncBufReadExt, AsyncWriteExt, BufReader};
+
+use crate::mcp::{macros::register_providers, Request, ResourceProvider, Response, ToolProvider};
 
 register_providers! {
     resources: [

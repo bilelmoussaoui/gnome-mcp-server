@@ -1,7 +1,8 @@
+use std::collections::HashMap;
+
 use anyhow::Result;
 use gio::glib;
-use std::collections::HashMap;
-use zbus::{Connection, zvariant::OwnedObjectPath};
+use zbus::zvariant::OwnedObjectPath;
 
 #[derive(Debug, Clone)]
 #[allow(dead_code)]
@@ -73,7 +74,7 @@ fn parse_source_data(path: OwnedObjectPath, uid: String, data: String) -> Option
 }
 
 pub async fn get_evolution_sources(
-    connection: &Connection,
+    connection: &zbus::Connection,
 ) -> Result<HashMap<OwnedObjectPath, (SourceInfo, zbus::Proxy<'static>)>> {
     let proxy = zbus::fdo::ObjectManagerProxy::builder(connection)
         .destination("org.gnome.evolution.dataserver.Sources5")?
@@ -103,7 +104,7 @@ pub async fn get_evolution_sources(
 }
 
 pub async fn open_calendar_source(
-    connection: &Connection,
+    connection: &zbus::Connection,
     source_uid: &str,
 ) -> Result<(String, String)> {
     let proxy = zbus::Proxy::new(
@@ -120,7 +121,7 @@ pub async fn open_calendar_source(
 }
 
 pub async fn open_task_list_source(
-    connection: &Connection,
+    connection: &zbus::Connection,
     source_uid: &str,
 ) -> Result<(String, String)> {
     let proxy = zbus::Proxy::new(

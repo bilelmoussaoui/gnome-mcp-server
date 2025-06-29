@@ -1,7 +1,7 @@
-use crate::mcp::ToolProvider;
-use crate::tool_params;
 use anyhow::Result;
 use gio::prelude::*;
+
+use crate::{mcp::ToolProvider, tool_params};
 
 #[derive(Default)]
 pub struct Applications;

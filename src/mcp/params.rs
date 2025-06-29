@@ -263,8 +263,9 @@ macro_rules! tool_params {
 
 #[cfg(test)]
 mod tests {
-    use crate::mcp::ToolParams;
     use serde_json::json;
+
+    use crate::mcp::ToolParams;
 
     // Test struct with only required parameters
     tool_params! {
