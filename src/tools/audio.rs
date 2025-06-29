@@ -1,4 +1,4 @@
-use crate::mcp::{ToolParams, ToolProvider};
+use crate::mcp::ToolProvider;
 use crate::tool_params;
 use anyhow::Result;
 use zbus::Connection;
@@ -8,7 +8,7 @@ pub struct Volume;
 
 tool_params! {
     VolumeParams,
-    ; optional(volume: f64 = 0.0, "Volume level (0-100, where 100 is maximum)"),
+    optional(volume: f64 = 0.0, "Volume level (0-100, where 100 is maximum)"),
     optional(mute: bool = false, "Mute (true) or unmute (false) the system"),
     optional(relative: bool = false, "If true, volume is relative change (+10, -5), if false, absolute level")
 }
@@ -16,32 +16,14 @@ tool_params! {
 impl ToolProvider for Volume {
     const NAME: &'static str = "set_volume";
     const DESCRIPTION: &'static str = "Control system volume and mute/unmute";
+    type Params = VolumeParams;
 
-    fn input_schema() -> serde_json::Value {
-        VolumeParams::input_schema()
-    }
-
-    async fn execute(&self, arguments: &serde_json::Value) -> Result<serde_json::Value> {
-        let params = VolumeParams::extract_params(arguments)?;
-
-        // Check that at least one parameter was provided (not just defaults)
-        let has_volume = arguments.get("volume").is_some();
-        let has_mute = arguments.get("mute").is_some();
-
-        if !has_volume && !has_mute {
-            return Ok(Self::error_response(
-                "Must specify either volume or mute parameter",
-            ));
-        }
-
-        let volume = if has_volume {
-            Some(params.volume)
+    async fn execute_with_params(&self, params: Self::Params) -> Result<serde_json::Value> {
+        if params.volume != 0.0 {
+            Self::execute_with_result(|| set_system_volume(params.volume, params.relative)).await
         } else {
-            None
-        };
-        let mute = if has_mute { Some(params.mute) } else { None };
-
-        Self::execute_with_result(|| set_system_volume(volume, mute, params.relative)).await
+            Self::execute_with_result(|| set_system_mute(params.mute)).await
+        }
     }
 }
 
@@ -57,13 +39,9 @@ tool_params! {
 impl ToolProvider for Media {
     const NAME: &'static str = "media_control";
     const DESCRIPTION: &'static str = "Control media playback (play, pause, skip, etc.) via MPRIS";
+    type Params = MediaParams;
 
-    fn input_schema() -> serde_json::Value {
-        MediaParams::input_schema()
-    }
-
-    async fn execute(&self, arguments: &serde_json::Value) -> Result<serde_json::Value> {
-        let params = MediaParams::extract_params(arguments)?;
+    async fn execute_with_params(&self, params: Self::Params) -> Result<serde_json::Value> {
         let player_ref = if params.player.is_empty() {
             None
         } else {
@@ -74,61 +52,51 @@ impl ToolProvider for Media {
     }
 }
 
-async fn set_system_volume(
-    volume: Option<f64>,
-    mute: Option<bool>,
-    relative: bool,
-) -> Result<String> {
-    let mut results = Vec::new();
-
-    if let Some(vol) = volume {
-        let volume_str = if relative {
-            if vol >= 0.0 {
-                format!("{}%+", vol)
-            } else {
-                format!("{}%-", vol.abs())
-            }
+async fn set_system_volume(volume: f64, relative: bool) -> Result<String> {
+    let volume_str = if relative {
+        if volume >= 0.0 {
+            format!("{}%+", volume)
         } else {
-            format!("{}%", vol)
-        };
-
-        // Try wpctl (WirePlumber control)
-        let output = tokio::process::Command::new("wpctl")
-            .args(["set-volume", "@DEFAULT_AUDIO_SINK@", &volume_str])
-            .output()
-            .await?;
-
-        if !output.status.success() {
-            return Err(anyhow::anyhow!(
-                "wpctl volume failed: {}",
-                String::from_utf8_lossy(&output.stderr)
-            ));
+            format!("{}%-", volume.abs())
         }
+    } else {
+        format!("{}%", volume)
+    };
 
-        results.push(format!("PipeWire: Volume set to {}", volume_str));
-    }
+    // Try wpctl (WirePlumber control)
+    let output = tokio::process::Command::new("wpctl")
+        .args(["set-volume", "@DEFAULT_AUDIO_SINK@", &volume_str])
+        .output()
+        .await?;
 
-    if let Some(should_mute) = mute {
-        let mute_arg = if should_mute { "1" } else { "0" };
-        let output = tokio::process::Command::new("wpctl")
-            .args(["set-mute", "@DEFAULT_AUDIO_SINK@", mute_arg])
-            .output()
-            .await?;
-
-        if !output.status.success() {
-            return Err(anyhow::anyhow!(
-                "wpctl mute failed: {}",
-                String::from_utf8_lossy(&output.stderr)
-            ));
-        }
-
-        results.push(format!(
-            "PipeWire: {}",
-            if should_mute { "Muted" } else { "Unmuted" }
+    if !output.status.success() {
+        return Err(anyhow::anyhow!(
+            "wpctl volume failed: {}",
+            String::from_utf8_lossy(&output.stderr)
         ));
     }
 
-    Ok(results.join(", "))
+    Ok(format!("PipeWire: Volume set to {}", volume_str))
+}
+
+async fn set_system_mute(mute: bool) -> Result<String> {
+    let mute_arg = if mute { "1" } else { "0" };
+    let output = tokio::process::Command::new("wpctl")
+        .args(["set-mute", "@DEFAULT_AUDIO_SINK@", mute_arg])
+        .output()
+        .await?;
+
+    if !output.status.success() {
+        return Err(anyhow::anyhow!(
+            "wpctl mute failed: {}",
+            String::from_utf8_lossy(&output.stderr)
+        ));
+    }
+
+    Ok(format!(
+        "PipeWire: {}",
+        if mute { "Muted" } else { "Unmuted" }
+    ))
 }
 
 async fn control_media_playback(action: &str, player: Option<&str>) -> Result<String> {

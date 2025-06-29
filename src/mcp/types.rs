@@ -65,6 +65,8 @@ pub trait ToolParams {
 }
 
 pub trait ToolProvider {
+    type Params: ToolParams;
+
     const NAME: &'static str;
     const DESCRIPTION: &'static str;
 
@@ -76,8 +78,16 @@ pub trait ToolProvider {
         }
     }
 
-    fn input_schema() -> serde_json::Value;
-    async fn execute(&self, arguments: &serde_json::Value) -> Result<serde_json::Value>;
+    fn input_schema() -> serde_json::Value {
+        Self::Params::input_schema()
+    }
+
+    async fn execute(&self, arguments: &serde_json::Value) -> Result<serde_json::Value> {
+        let params = Self::Params::extract_params(arguments)?;
+        self.execute_with_params(params).await
+    }
+
+    async fn execute_with_params(&self, params: Self::Params) -> Result<serde_json::Value>;
 
     fn success_response(result: impl Into<serde_json::Value>) -> serde_json::Value {
         serde_json::json!({

@@ -1,4 +1,4 @@
-use crate::mcp::{ToolParams, ToolProvider};
+use crate::mcp::ToolProvider;
 use crate::tool_params;
 use anyhow::Result;
 use zbus::Connection;
@@ -14,13 +14,9 @@ tool_params! {
 impl ToolProvider for Wallpaper {
     const NAME: &'static str = "set_wallpaper";
     const DESCRIPTION: &'static str = "Set the desktop wallpaper from a local file path";
+    type Params = WallpaperParams;
 
-    fn input_schema() -> serde_json::Value {
-        WallpaperParams::input_schema()
-    }
-
-    async fn execute(&self, arguments: &serde_json::Value) -> Result<serde_json::Value> {
-        let params = WallpaperParams::extract_params(arguments)?;
+    async fn execute_with_params(&self, params: Self::Params) -> Result<serde_json::Value> {
         // Validate file exists and is an image
         validate_image_file(&params.image_path)?;
 

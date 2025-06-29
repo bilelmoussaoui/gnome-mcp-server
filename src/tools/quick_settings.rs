@@ -1,4 +1,4 @@
-use crate::mcp::{ToolParams, ToolProvider};
+use crate::mcp::ToolProvider;
 use crate::tool_params;
 use anyhow::Result;
 use gio::prelude::*;
@@ -17,14 +17,9 @@ impl ToolProvider for QuickSettings {
     const NAME: &'static str = "quick_settings";
     const DESCRIPTION: &'static str =
         "Toggle boolean system settings (WiFi, Bluetooth, Night Light, etc.)";
+    type Params = QuickSettingsParams;
 
-    fn input_schema() -> serde_json::Value {
-        QuickSettingsParams::input_schema()
-    }
-
-    async fn execute(&self, arguments: &serde_json::Value) -> Result<serde_json::Value> {
-        let params = QuickSettingsParams::extract_params(arguments)?;
-
+    async fn execute_with_params(&self, params: Self::Params) -> Result<serde_json::Value> {
         Self::execute_with_result(|| execute_boolean_toggle(&params.setting, params.enabled)).await
     }
 }

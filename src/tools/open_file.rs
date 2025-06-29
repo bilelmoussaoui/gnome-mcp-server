@@ -1,4 +1,4 @@
-use crate::mcp::{ToolParams, ToolProvider};
+use crate::mcp::ToolProvider;
 use crate::tool_params;
 use anyhow::Result;
 use gio::prelude::*;
@@ -14,14 +14,9 @@ tool_params! {
 impl ToolProvider for OpenFile {
     const NAME: &'static str = "open_file";
     const DESCRIPTION: &'static str = "Open a file or URL with the default application";
+    type Params = OpenFileParams;
 
-    fn input_schema() -> serde_json::Value {
-        OpenFileParams::input_schema()
-    }
-
-    async fn execute(&self, arguments: &serde_json::Value) -> Result<serde_json::Value> {
-        let params = OpenFileParams::extract_params(arguments)?;
-
+    async fn execute_with_params(&self, params: Self::Params) -> Result<serde_json::Value> {
         Self::execute_with_result(|| open_file(&params.path)).await
     }
 }

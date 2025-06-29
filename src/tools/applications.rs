@@ -1,4 +1,4 @@
-use crate::mcp::{ToolParams, ToolProvider};
+use crate::mcp::ToolProvider;
 use crate::tool_params;
 use anyhow::Result;
 use gio::prelude::*;
@@ -14,14 +14,9 @@ tool_params! {
 impl ToolProvider for Applications {
     const NAME: &'static str = "launch_application";
     const DESCRIPTION: &'static str = "Launch an application by name or executable";
+    type Params = ApplicationParams;
 
-    fn input_schema() -> serde_json::Value {
-        ApplicationParams::input_schema()
-    }
-
-    async fn execute(&self, arguments: &serde_json::Value) -> Result<serde_json::Value> {
-        let params = ApplicationParams::extract_params(arguments)?;
-
+    async fn execute_with_params(&self, params: Self::Params) -> Result<serde_json::Value> {
         Self::execute_with_message(
             || launch_application(&params.app_name),
             format!("Successfully launched application: {}", params.app_name),

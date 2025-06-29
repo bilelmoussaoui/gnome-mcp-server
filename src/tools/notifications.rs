@@ -1,4 +1,4 @@
-use crate::mcp::{ToolParams, ToolProvider};
+use crate::mcp::ToolProvider;
 use crate::tool_params;
 use anyhow::Result;
 use zbus::Connection;
@@ -16,14 +16,9 @@ tool_params! {
 impl ToolProvider for Notifications {
     const NAME: &'static str = "send_notification";
     const DESCRIPTION: &'static str = "Send a desktop notification";
+    type Params = NotificationParams;
 
-    fn input_schema() -> serde_json::Value {
-        NotificationParams::input_schema()
-    }
-
-    async fn execute(&self, arguments: &serde_json::Value) -> Result<serde_json::Value> {
-        let params = NotificationParams::extract_params(arguments)?;
-
+    async fn execute_with_params(&self, params: Self::Params) -> Result<serde_json::Value> {
         Self::execute_with_message(
             || send_notification(&params.summary, &params.body, params.timeout),
             format!("Notification sent: {}", params.summary),
