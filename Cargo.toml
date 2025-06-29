@@ -6,6 +6,7 @@ license = "MIT"
 
 [dependencies]
 anyhow = "1.0"
+ashpd = "0.9"
 calcard = "0.1"
 chrono = "0.4"
 gio = "0.20"

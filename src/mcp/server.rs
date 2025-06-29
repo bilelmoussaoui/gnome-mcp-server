@@ -20,6 +20,7 @@ register_providers! {
         crate::tools::audio::Volume,
         crate::tools::audio::Media,
         crate::tools::quick_settings::QuickSettings,
+        crate::tools::screenshot::Screenshot,
     ]
 }
 

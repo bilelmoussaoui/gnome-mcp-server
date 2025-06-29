@@ -99,6 +99,19 @@ impl Default for AudioToolConfig {
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct QuickSettingsConfig {}
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ScreenshotConfig {
+    /// Show interactive dialog by default
+    #[serde(default)]
+    pub interactive: bool,
+}
+
+impl Default for ScreenshotConfig {
+    fn default() -> Self {
+        Self { interactive: false }
+    }
+}
+
 // Container structs
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ResourcesConfig {
@@ -129,6 +142,7 @@ pub struct ToolsConfig {
     pub wallpaper: Option<WallpaperConfig>,
     pub audio: Option<AudioToolConfig>,
     pub quick_settings: Option<QuickSettingsConfig>,
+    pub screenshot: Option<ScreenshotConfig>,
 }
 
 impl Default for ToolsConfig {
@@ -140,6 +154,7 @@ impl Default for ToolsConfig {
             wallpaper: Some(WallpaperConfig::default()),
             audio: Some(AudioToolConfig::default()),
             quick_settings: Some(QuickSettingsConfig::default()),
+            screenshot: Some(ScreenshotConfig::default()),
         }
     }
 }
@@ -214,6 +229,7 @@ impl Config {
             crate::tools::quick_settings::QuickSettings::NAME => {
                 self.tools.quick_settings.is_some()
             }
+            crate::tools::screenshot::Screenshot::NAME => self.tools.screenshot.is_some(),
             _ => true, // Unknown tools are enabled by default
         }
     }
@@ -233,6 +249,10 @@ impl Config {
 
     pub fn get_audio_tool_config(&self) -> AudioToolConfig {
         self.tools.audio.clone().unwrap_or_default()
+    }
+
+    pub fn get_screenshot_config(&self) -> ScreenshotConfig {
+        self.tools.screenshot.clone().unwrap_or_default()
     }
 }
 
