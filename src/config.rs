@@ -60,21 +60,8 @@ pub struct ApplicationsResourceConfig {}
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct AudioResourceConfig {}
 
-// Tool-specific configuration structs
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct NotificationsConfig {
-    /// Default notification timeout in milliseconds
-    #[serde(default)]
-    pub default_timeout: u32,
-}
-
-impl Default for NotificationsConfig {
-    fn default() -> Self {
-        Self {
-            default_timeout: 5000,
-        }
-    }
-}
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+pub struct NotificationsConfig {}
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct ApplicationsToolConfig {}
@@ -237,10 +224,6 @@ impl Config {
 
     pub fn get_tasks_config(&self) -> TasksConfig {
         self.resources.tasks.clone().unwrap_or_default()
-    }
-
-    pub fn get_notifications_config(&self) -> NotificationsConfig {
-        self.tools.notifications.clone().unwrap_or_default()
     }
 
     pub fn get_audio_tool_config(&self) -> AudioToolConfig {
