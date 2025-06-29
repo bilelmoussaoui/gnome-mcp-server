@@ -11,5 +11,8 @@ async fn main() -> anyhow::Result<()> {
         .with_max_level(tracing::Level::INFO)
         .init();
 
+    // Register as a host application, given that we use some portals.
+    ashpd::register_host_app("com.belmoussaoui.gnome-mcp-server".try_into().unwrap()).await?;
+
     mcp::Server::run().await
 }
