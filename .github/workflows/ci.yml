@@ -28,7 +28,7 @@ jobs:
     - name: Install system dependencies
       run: |
         sudo apt-get update
-        sudo apt-get install -y libglib2.0-dev libgio-3.0-dev
+        sudo apt-get install -y libglib2.0-dev
 
     - name: Cache cargo dependencies
       uses: actions/cache@v4
