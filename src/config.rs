@@ -286,7 +286,6 @@ mod tests {
             },
             "tools": {
                 "notifications": {
-                    "default_timeout": 10000
                 }
             }
         }"#;

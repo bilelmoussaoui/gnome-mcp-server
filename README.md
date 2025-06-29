@@ -31,7 +31,6 @@ Example config:
   },
   "tools": {
     "notifications": {
-      "default_timeout": 10000
     }
   }
 }

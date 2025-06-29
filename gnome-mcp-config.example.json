@@ -12,7 +12,6 @@
   },
   "tools": {
     "notifications": {
-      "default_timeout": 10000
     },
     "audio": {
       "volume_step": 5
