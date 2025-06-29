@@ -1,13 +1,17 @@
-use crate::mcp::ToolDefinition;
+use crate::mcp::ToolProvider;
 use anyhow::Result;
 use serde_json::json;
 use zbus::Connection;
 
-pub fn get_volume_tool_definition() -> ToolDefinition {
-    ToolDefinition {
-        name: "set_volume".to_string(),
-        description: "Control system volume and mute/unmute".to_string(),
-        input_schema: json!({
+#[derive(Default)]
+pub struct Volume;
+
+impl ToolProvider for Volume {
+    const NAME: &'static str = "set_volume";
+    const DESCRIPTION: &'static str = "Control system volume and mute/unmute";
+
+    fn input_schema() -> serde_json::Value {
+        json!({
             "type": "object",
             "properties": {
                 "volume": {
@@ -25,15 +29,46 @@ pub fn get_volume_tool_definition() -> ToolDefinition {
                     "description": "If true, volume is relative change (+10, -5), if false, absolute level"
                 }
             }
-        }),
+        })
+    }
+
+    async fn execute(&self, arguments: &serde_json::Value) -> Result<serde_json::Value> {
+        let volume = arguments.get("volume").and_then(|v| v.as_f64());
+        let mute = arguments.get("mute").and_then(|v| v.as_bool());
+        let relative = arguments
+            .get("relative")
+            .and_then(|v| v.as_bool())
+            .unwrap_or(false);
+
+        if volume.is_none() && mute.is_none() {
+            return Ok(json!({
+                "success": false,
+                "error": "Must specify either volume or mute parameter"
+            }));
+        }
+
+        match set_system_volume(volume, mute, relative).await {
+            Ok(result) => Ok(json!({
+                "success": true,
+                "result": result
+            })),
+            Err(e) => Ok(json!({
+                "success": false,
+                "error": e.to_string()
+            })),
+        }
     }
 }
 
-pub fn get_media_tool_definition() -> ToolDefinition {
-    ToolDefinition {
-        name: "media_control".to_string(),
-        description: "Control media playback (play, pause, skip, etc.) via MPRIS".to_string(),
-        input_schema: json!({
+#[derive(Default)]
+pub struct Media;
+
+impl ToolProvider for Media {
+    const NAME: &'static str = "media_control";
+    const DESCRIPTION: &'static str = "Control media playback (play, pause, skip, etc.) via MPRIS";
+
+    fn input_schema() -> serde_json::Value {
+        json!({
             "type": "object",
             "properties": {
                 "action": {
@@ -47,54 +82,27 @@ pub fn get_media_tool_definition() -> ToolDefinition {
                 }
             },
             "required": ["action"]
-        }),
-    }
-}
-
-pub async fn execute_volume(arguments: &serde_json::Value) -> Result<serde_json::Value> {
-    let volume = arguments.get("volume").and_then(|v| v.as_f64());
-    let mute = arguments.get("mute").and_then(|v| v.as_bool());
-    let relative = arguments
-        .get("relative")
-        .and_then(|v| v.as_bool())
-        .unwrap_or(false);
-
-    if volume.is_none() && mute.is_none() {
-        return Ok(json!({
-            "success": false,
-            "error": "Must specify either volume or mute parameter"
-        }));
+        })
     }
 
-    match set_system_volume(volume, mute, relative).await {
-        Ok(result) => Ok(json!({
-            "success": true,
-            "result": result
-        })),
-        Err(e) => Ok(json!({
-            "success": false,
-            "error": e.to_string()
-        })),
-    }
-}
+    async fn execute(&self, arguments: &serde_json::Value) -> Result<serde_json::Value> {
+        let action = arguments
+            .get("action")
+            .and_then(|v| v.as_str())
+            .ok_or_else(|| anyhow::anyhow!("Missing action parameter"))?;
 
-pub async fn execute_media_control(arguments: &serde_json::Value) -> Result<serde_json::Value> {
-    let action = arguments
-        .get("action")
-        .and_then(|v| v.as_str())
-        .ok_or_else(|| anyhow::anyhow!("Missing action parameter"))?;
+        let player = arguments.get("player").and_then(|v| v.as_str());
 
-    let player = arguments.get("player").and_then(|v| v.as_str());
-
-    match control_media_playback(action, player).await {
-        Ok(result) => Ok(json!({
-            "success": true,
-            "result": result
-        })),
-        Err(e) => Ok(json!({
-            "success": false,
-            "error": e.to_string()
-        })),
+        match control_media_playback(action, player).await {
+            Ok(result) => Ok(json!({
+                "success": true,
+                "result": result
+            })),
+            Err(e) => Ok(json!({
+                "success": false,
+                "error": e.to_string()
+            })),
+        }
     }
 }
 

@@ -1,15 +1,19 @@
-use crate::mcp::ToolDefinition;
+use crate::mcp::ToolProvider;
 use anyhow::Result;
 use gio::prelude::*;
 use serde_json::json;
 use zbus::Connection;
 
-pub fn get_tool_definition() -> ToolDefinition {
-    ToolDefinition {
-        name: "quick_settings".to_owned(),
-        description: "Toggle boolean system settings (WiFi, Bluetooth, Night Light, etc.)"
-            .to_owned(),
-        input_schema: json!({
+#[derive(Default)]
+pub struct QuickSettings;
+
+impl ToolProvider for QuickSettings {
+    const NAME: &'static str = "quick_settings";
+    const DESCRIPTION: &'static str =
+        "Toggle boolean system settings (WiFi, Bluetooth, Night Light, etc.)";
+
+    fn input_schema() -> serde_json::Value {
+        json!({
             "type": "object",
             "properties": {
                 "setting": {
@@ -23,30 +27,30 @@ pub fn get_tool_definition() -> ToolDefinition {
                 }
             },
             "required": ["setting", "enabled"]
-        }),
+        })
     }
-}
 
-pub async fn execute(arguments: &serde_json::Value) -> Result<serde_json::Value> {
-    let setting = arguments
-        .get("setting")
-        .and_then(|v| v.as_str())
-        .ok_or_else(|| anyhow::anyhow!("Missing setting parameter"))?;
+    async fn execute(&self, arguments: &serde_json::Value) -> Result<serde_json::Value> {
+        let setting = arguments
+            .get("setting")
+            .and_then(|v| v.as_str())
+            .ok_or_else(|| anyhow::anyhow!("Missing setting parameter"))?;
 
-    let enabled = arguments
-        .get("enabled")
-        .and_then(|v| v.as_bool())
-        .ok_or_else(|| anyhow::anyhow!("Missing enabled parameter"))?;
+        let enabled = arguments
+            .get("enabled")
+            .and_then(|v| v.as_bool())
+            .ok_or_else(|| anyhow::anyhow!("Missing enabled parameter"))?;
 
-    match execute_boolean_toggle(setting, enabled).await {
-        Ok(result) => Ok(json!({
-            "success": true,
-            "result": result
-        })),
-        Err(e) => Ok(json!({
-            "success": false,
-            "error": e.to_string()
-        })),
+        match execute_boolean_toggle(setting, enabled).await {
+            Ok(result) => Ok(json!({
+                "success": true,
+                "result": result
+            })),
+            Err(e) => Ok(json!({
+                "success": false,
+                "error": e.to_string()
+            })),
+        }
     }
 }
 

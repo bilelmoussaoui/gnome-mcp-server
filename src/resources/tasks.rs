@@ -1,33 +1,33 @@
 use crate::{
     gnome::evolution::{SourceType, get_evolution_sources, open_task_list_source},
-    mcp::{Resource, ResourceContent},
+    mcp::{ResourceContent, ResourceProvider},
 };
 use anyhow::Result;
 use serde_json::json;
 use zbus::Connection;
 
-pub fn get_resource() -> Resource {
-    Resource {
-        uri: "gnome://tasks/list".to_owned(),
-        name: "Task Lists".to_owned(),
-        description: "Task lists and todos from Evolution Data Server".to_owned(),
-        mime_type: Some("application/json".to_owned()),
+#[derive(Default)]
+pub struct Tasks;
+
+impl ResourceProvider for Tasks {
+    const URI: &'static str = "gnome://tasks/list";
+    const NAME: &'static str = "Task Lists";
+    const DESCRIPTION: &'static str = "Task lists and todos from Evolution Data Server";
+
+    async fn get_content(&self) -> Result<ResourceContent> {
+        let tasks = get_task_lists().await?;
+
+        let tasks_json = json!({
+            "tasks": tasks,
+            "count": tasks.len()
+        });
+
+        Ok(ResourceContent {
+            uri: Self::URI,
+            mime_type: Self::MIME_TYPE,
+            text: tasks_json.to_string(),
+        })
     }
-}
-
-pub async fn get_content() -> Result<ResourceContent> {
-    let tasks = get_task_lists().await?;
-
-    let tasks_json = json!({
-        "tasks": tasks,
-        "count": tasks.len()
-    });
-
-    Ok(ResourceContent {
-        uri: "gnome://tasks/list".to_owned(),
-        mime_type: "application/json".to_owned(),
-        text: tasks_json.to_string(),
-    })
 }
 
 pub async fn get_task_lists() -> Result<Vec<serde_json::Value>> {

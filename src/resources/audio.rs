@@ -1,26 +1,27 @@
-use crate::mcp::{Resource, ResourceContent};
+use crate::mcp::{ResourceContent, ResourceProvider};
 use anyhow::Result;
 use serde_json::json;
 use std::collections::HashMap;
 use zbus::Connection;
 
-pub fn get_resource() -> Resource {
-    Resource {
-        uri: "gnome://audio/status".to_owned(),
-        name: "Audio Status".to_owned(),
-        description: "Current system volume, mute state, and media playback status".to_owned(),
-        mime_type: Some("application/json".to_owned()),
+#[derive(Default)]
+pub struct Audio;
+
+impl ResourceProvider for Audio {
+    const URI: &'static str = "gnome://audio/status";
+    const NAME: &'static str = "Audio Status";
+    const DESCRIPTION: &'static str =
+        "Current system volume, mute state, and media playback status";
+
+    async fn get_content(&self) -> Result<ResourceContent> {
+        let audio_status = get_audio_status().await?;
+
+        Ok(ResourceContent {
+            uri: Self::URI,
+            mime_type: Self::MIME_TYPE,
+            text: audio_status.to_string(),
+        })
     }
-}
-
-pub async fn get_content() -> Result<ResourceContent> {
-    let audio_status = get_audio_status().await?;
-
-    Ok(ResourceContent {
-        uri: "gnome://audio/status".to_owned(),
-        mime_type: "application/json".to_owned(),
-        text: audio_status.to_string(),
-    })
 }
 
 async fn get_audio_status() -> Result<serde_json::Value> {

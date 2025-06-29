@@ -1,8 +1,27 @@
-use crate::mcp::{Request, Response};
-use crate::resources;
+use crate::mcp::macros::register_providers;
+use crate::mcp::{Request, ResourceProvider, Response, ToolProvider};
 use anyhow::Result;
 use serde_json::json;
 use tokio::io::{self, AsyncBufReadExt, AsyncWriteExt, BufReader};
+
+register_providers! {
+    resources: [
+        crate::resources::system_info::SystemInfo,
+        crate::resources::applications::Applications,
+        crate::resources::calendar::Calendar,
+        crate::resources::tasks::Tasks,
+        crate::resources::audio::Audio,
+    ],
+    tools: [
+        crate::tools::notifications::Notifications,
+        crate::tools::applications::Applications,
+        crate::tools::open_file::OpenFile,
+        crate::tools::wallpaper::Wallpaper,
+        crate::tools::audio::Volume,
+        crate::tools::audio::Media,
+        crate::tools::quick_settings::QuickSettings,
+    ]
+}
 
 pub struct Server;
 
@@ -64,14 +83,14 @@ impl Server {
     }
 
     async fn handle_list_tools() -> serde_json::Value {
-        let tools = crate::tools::list_tools();
+        let tools = list_tools();
         json!({
             "tools": tools
         })
     }
 
     async fn handle_list_resources() -> serde_json::Value {
-        let resources = resources::list_resources();
+        let resources = list_resources();
         json!({
             "resources": resources
         })
@@ -83,7 +102,7 @@ impl Server {
                 params.get("name").and_then(|n| n.as_str()),
                 params.get("arguments"),
             ) {
-                match crate::tools::execute_tool(name, arguments).await {
+                match execute_tool(name, arguments).await {
                     Ok(result) => json!({
                         "content": [
                             {
@@ -105,7 +124,7 @@ impl Server {
     async fn handle_read_resource(request: &Request) -> serde_json::Value {
         if let Some(params) = &request.params {
             if let Some(uri) = params.get("uri").and_then(|u| u.as_str()) {
-                match resources::resource_for_uri(uri).await {
+                match resource_for_uri(uri).await {
                     Ok(content) => json!({
                         "contents": [{
                             "uri": content.uri,

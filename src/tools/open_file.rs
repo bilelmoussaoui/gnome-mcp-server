@@ -1,13 +1,17 @@
-use crate::mcp::ToolDefinition;
+use crate::mcp::ToolProvider;
 use anyhow::Result;
 use gio::prelude::*;
 use serde_json::json;
 
-pub fn get_tool_definition() -> ToolDefinition {
-    ToolDefinition {
-        name: "open_file".to_owned(),
-        description: "Open a file or URL with the default application".to_owned(),
-        input_schema: json!({
+#[derive(Default)]
+pub struct OpenFile;
+
+impl ToolProvider for OpenFile {
+    const NAME: &'static str = "open_file";
+    const DESCRIPTION: &'static str = "Open a file or URL with the default application";
+
+    fn input_schema() -> serde_json::Value {
+        json!({
             "type": "object",
             "properties": {
                 "path": {
@@ -16,27 +20,27 @@ pub fn get_tool_definition() -> ToolDefinition {
                 }
             },
             "required": ["path"]
-        }),
+        })
     }
-}
 
-pub async fn execute(arguments: &serde_json::Value) -> Result<serde_json::Value> {
-    let path = arguments
-        .get("path")
-        .and_then(|v| v.as_str())
-        .ok_or_else(|| anyhow::anyhow!("Missing path"))?;
+    async fn execute(&self, arguments: &serde_json::Value) -> Result<serde_json::Value> {
+        let path = arguments
+            .get("path")
+            .and_then(|v| v.as_str())
+            .ok_or_else(|| anyhow::anyhow!("Missing path"))?;
 
-    match open_file(path).await {
-        Ok(result) => Ok(json!({
-            "success": true,
-            "result": format!("Opened: {}", path),
-            "debug": result
-        })),
-        Err(e) => Ok(json!({
-            "success": false,
-            "error": e.to_string(),
-            "debug": format!("Failed to open: {}", path)
-        })),
+        match open_file(path).await {
+            Ok(result) => Ok(json!({
+                "success": true,
+                "result": format!("Opened: {}", path),
+                "debug": result
+            })),
+            Err(e) => Ok(json!({
+                "success": false,
+                "error": e.to_string(),
+                "debug": format!("Failed to open: {}", path)
+            })),
+        }
     }
 }
 

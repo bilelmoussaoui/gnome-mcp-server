@@ -1,33 +1,33 @@
 use crate::{
     gnome::evolution::SourceType,
-    mcp::{Resource, ResourceContent},
+    mcp::{ResourceContent, ResourceProvider},
 };
 use anyhow::Result;
 use serde_json::json;
 use zbus::Connection;
 
-pub fn get_resource() -> Resource {
-    Resource {
-        uri: "gnome://calendar/events".to_owned(),
-        name: "Calendar Events".to_owned(),
-        description: "Calendar events from Evolution Data Server".to_owned(),
-        mime_type: Some("application/json".to_owned()),
+#[derive(Default)]
+pub struct Calendar;
+
+impl ResourceProvider for Calendar {
+    const URI: &'static str = "gnome://calendar/events";
+    const NAME: &'static str = "Calendar Events";
+    const DESCRIPTION: &'static str = "Calendar events from Evolution Data Server";
+
+    async fn get_content(&self) -> Result<ResourceContent> {
+        let events = get_calendar_events().await?;
+
+        let events_json = json!({
+            "events": events,
+            "count": events.len()
+        });
+
+        Ok(ResourceContent {
+            uri: Self::URI,
+            mime_type: Self::MIME_TYPE,
+            text: events_json.to_string(),
+        })
     }
-}
-
-pub async fn get_content() -> Result<ResourceContent> {
-    let events = get_calendar_events().await?;
-
-    let events_json = json!({
-        "events": events,
-        "count": events.len()
-    });
-
-    Ok(ResourceContent {
-        uri: "gnome://calendar/events".to_owned(),
-        mime_type: "application/json".to_owned(),
-        text: events_json.to_string(),
-    })
 }
 
 pub async fn get_calendar_events() -> Result<Vec<serde_json::Value>> {

@@ -1,13 +1,17 @@
-use crate::mcp::ToolDefinition;
+use crate::mcp::ToolProvider;
 use anyhow::Result;
 use serde_json::json;
 use zbus::Connection;
 
-pub fn get_tool_definition() -> ToolDefinition {
-    ToolDefinition {
-        name: "set_wallpaper".to_owned(),
-        description: "Set the desktop wallpaper from a local file path".to_owned(),
-        input_schema: json!({
+#[derive(Default)]
+pub struct Wallpaper;
+
+impl ToolProvider for Wallpaper {
+    const NAME: &'static str = "set_wallpaper";
+    const DESCRIPTION: &'static str = "Set the desktop wallpaper from a local file path";
+
+    fn input_schema() -> serde_json::Value {
+        json!({
             "type": "object",
             "properties": {
                 "image_path": {
@@ -16,39 +20,39 @@ pub fn get_tool_definition() -> ToolDefinition {
                 }
             },
             "required": ["image_path"]
-        }),
+        })
     }
-}
 
-pub async fn execute(arguments: &serde_json::Value) -> Result<serde_json::Value> {
-    let image_path = arguments
-        .get("image_path")
-        .and_then(|v| v.as_str())
-        .ok_or_else(|| anyhow::anyhow!("Missing image_path"))?;
-    // Validate file exists and is an image
-    validate_image_file(image_path)?;
+    async fn execute(&self, arguments: &serde_json::Value) -> Result<serde_json::Value> {
+        let image_path = arguments
+            .get("image_path")
+            .and_then(|v| v.as_str())
+            .ok_or_else(|| anyhow::anyhow!("Missing image_path"))?;
+        // Validate file exists and is an image
+        validate_image_file(image_path)?;
 
-    // Convert to file:// URI format
-    let image_uri = if image_path.starts_with("file://") {
-        image_path.to_string()
-    } else {
-        format!(
-            "file://{}",
-            std::path::Path::new(image_path).canonicalize()?.display()
-        )
-    };
+        // Convert to file:// URI format
+        let image_uri = if image_path.starts_with("file://") {
+            image_path.to_string()
+        } else {
+            format!(
+                "file://{}",
+                std::path::Path::new(image_path).canonicalize()?.display()
+            )
+        };
 
-    match set_wallpaper(&image_uri).await {
-        Ok(result) => Ok(json!({
-            "success": true,
-            "result": format!("Wallpaper set to: {}", image_path),
-            "details": result
-        })),
-        Err(e) => Ok(json!({
-            "success": false,
-            "error": e.to_string(),
-            "debug": format!("Failed to set wallpaper: {}", image_path)
-        })),
+        match set_wallpaper(&image_uri).await {
+            Ok(result) => Ok(json!({
+                "success": true,
+                "result": format!("Wallpaper set to: {}", image_path),
+                "details": result
+            })),
+            Err(e) => Ok(json!({
+                "success": false,
+                "error": e.to_string(),
+                "debug": format!("Failed to set wallpaper: {}", image_path)
+            })),
+        }
     }
 }
 

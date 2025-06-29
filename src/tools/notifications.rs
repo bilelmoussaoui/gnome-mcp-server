@@ -1,13 +1,17 @@
-use crate::mcp::ToolDefinition;
+use crate::mcp::ToolProvider;
 use anyhow::Result;
 use serde_json::json;
 use zbus::Connection;
 
-pub fn get_tool_definition() -> ToolDefinition {
-    ToolDefinition {
-        name: "send_notification".to_owned(),
-        description: "Send a desktop notification".to_owned(),
-        input_schema: json!({
+#[derive(Default)]
+pub struct Notifications;
+
+impl ToolProvider for Notifications {
+    const NAME: &'static str = "send_notification";
+    const DESCRIPTION: &'static str = "Send a desktop notification";
+
+    fn input_schema() -> serde_json::Value {
+        json!({
             "type": "object",
             "properties": {
                 "summary": {
@@ -24,32 +28,32 @@ pub fn get_tool_definition() -> ToolDefinition {
                 }
             },
             "required": ["summary", "body"]
-        }),
+        })
     }
-}
 
-pub async fn execute(arguments: &serde_json::Value) -> Result<serde_json::Value> {
-    let summary = arguments
-        .get("summary")
-        .and_then(|v| v.as_str())
-        .ok_or_else(|| anyhow::anyhow!("Missing summary"))?;
+    async fn execute(&self, arguments: &serde_json::Value) -> Result<serde_json::Value> {
+        let summary = arguments
+            .get("summary")
+            .and_then(|v| v.as_str())
+            .ok_or_else(|| anyhow::anyhow!("Missing summary"))?;
 
-    let body = arguments
-        .get("body")
-        .and_then(|v| v.as_str())
-        .ok_or_else(|| anyhow::anyhow!("Missing body"))?;
+        let body = arguments
+            .get("body")
+            .and_then(|v| v.as_str())
+            .ok_or_else(|| anyhow::anyhow!("Missing body"))?;
 
-    let timeout = arguments
-        .get("timeout")
-        .and_then(|v| v.as_i64())
-        .unwrap_or(5000);
+        let timeout = arguments
+            .get("timeout")
+            .and_then(|v| v.as_i64())
+            .unwrap_or(5000);
 
-    send_notification(summary, body, timeout).await?;
+        send_notification(summary, body, timeout).await?;
 
-    Ok(json!({
-        "success": true,
-        "result": format!("Notification sent: {}", summary)
-    }))
+        Ok(json!({
+            "success": true,
+            "result": format!("Notification sent: {}", summary)
+        }))
+    }
 }
 
 async fn send_notification(summary: &str, body: &str, timeout: i64) -> Result<()> {
