@@ -77,14 +77,16 @@ async fn get_calendar_objects(
     )
     .await?;
 
-    // Get upcoming events (next 30 days)
+    // Get events based on configuration
+    let config = crate::config::CONFIG.get_calendar_config();
     let now = chrono::Utc::now();
-    let month_later = now + chrono::Duration::days(30);
+    let start_time = now - chrono::Duration::days(config.days_behind as i64);
+    let end_time = now + chrono::Duration::days(config.days_ahead as i64);
 
     let sexp_query = format!(
         "(occur-in-time-range? (make-time \"{}\") (make-time \"{}\"))",
-        now.format("%Y%m%dT%H%M%SZ"),
-        month_later.format("%Y%m%dT%H%M%SZ")
+        start_time.format("%Y%m%dT%H%M%SZ"),
+        end_time.format("%Y%m%dT%H%M%SZ")
     );
 
     let response = proxy.call_method("GetObjectList", &(sexp_query,)).await?;

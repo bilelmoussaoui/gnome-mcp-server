@@ -9,8 +9,8 @@ pub struct Notifications;
 tool_params! {
     NotificationParams,
     required(summary: string, "Notification summary"),
-    required(body: string, "Notification body");
-    optional(timeout: i64 = 5000, "Notification timeout in milliseconds")
+    required(body: string, "Notification body"),
+    optional(timeout: i64, "Notification timeout in milliseconds")
 }
 
 impl ToolProvider for Notifications {
@@ -19,8 +19,11 @@ impl ToolProvider for Notifications {
     type Params = NotificationParams;
 
     async fn execute_with_params(&self, params: Self::Params) -> Result<serde_json::Value> {
+        let config = crate::config::CONFIG.get_notifications_config();
+        let timeout = params.timeout.unwrap_or(config.default_timeout as i64);
+
         Self::execute_with_message(
-            || send_notification(&params.summary, &params.body, params.timeout),
+            || send_notification(&params.summary, &params.body, timeout),
             format!("Notification sent: {}", params.summary),
         )
         .await

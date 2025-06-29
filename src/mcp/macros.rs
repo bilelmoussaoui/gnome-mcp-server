@@ -4,12 +4,18 @@ macro_rules! register_providers {
         tools: [ $($tool:path),* $(,)? ]
     ) => {
         pub fn list_resources() -> Vec<crate::mcp::Resource> {
-            vec![ $( <$resource>::resource() ),* ]
+            let mut resources = Vec::new();
+            $(
+                if crate::config::CONFIG.is_resource_enabled::<$resource>() {
+                    resources.push(<$resource>::resource());
+                }
+            )*
+            resources
         }
 
         pub async fn resource_for_uri(uri: &str) -> anyhow::Result<crate::mcp::ResourceContent> {
             $(
-                if <$resource>::URI == uri {
+                if <$resource>::URI == uri && crate::config::CONFIG.is_resource_enabled::<$resource>() {
                     return <$resource>::default().get_content().await;
                 }
             )*
@@ -17,12 +23,18 @@ macro_rules! register_providers {
         }
 
         pub fn list_tools() -> Vec<crate::mcp::ToolDefinition> {
-            vec![ $( <$tool>::get_tool_definition() ),* ]
+            let mut tools = Vec::new();
+            $(
+                if crate::config::CONFIG.is_tool_enabled::<$tool>() {
+                    tools.push(<$tool>::get_tool_definition());
+                }
+            )*
+            tools
         }
 
         pub async fn execute_tool(name: &str, arguments: &serde_json::Value) -> anyhow::Result<serde_json::Value> {
             $(
-                if <$tool>::NAME == name {
+                if <$tool>::NAME == name && crate::config::CONFIG.is_tool_enabled::<$tool>() {
                     return <$tool>::default().execute(arguments).await;
                 }
             )*

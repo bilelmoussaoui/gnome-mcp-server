@@ -1,3 +1,4 @@
+mod config;
 mod gnome;
 mod mcp;
 mod resources;

@@ -8,9 +8,10 @@ pub struct Volume;
 
 tool_params! {
     VolumeParams,
-    optional(volume: f64 = 0.0, "Volume level (0-100, where 100 is maximum)"),
-    optional(mute: bool = false, "Mute (true) or unmute (false) the system"),
-    optional(relative: bool = false, "If true, volume is relative change (+10, -5), if false, absolute level")
+    optional(volume: f64, "Volume level (0-100, where 100 is maximum)"),
+    optional(mute: bool, "Mute (true) or unmute (false) the system"),
+    optional(relative: bool, "If true, volume is relative change (+10, -5), if false, absolute level"),
+    optional(direction: string, "Direction for default step: 'up' or 'down' (uses config volume_step)")
 }
 
 impl ToolProvider for Volume {
@@ -19,10 +20,31 @@ impl ToolProvider for Volume {
     type Params = VolumeParams;
 
     async fn execute_with_params(&self, params: Self::Params) -> Result<serde_json::Value> {
-        if params.volume != 0.0 {
-            Self::execute_with_result(|| set_system_volume(params.volume, params.relative)).await
+        let config = crate::config::CONFIG.get_audio_tool_config();
+
+        if let Some(volume) = params.volume {
+            Self::execute_with_result(|| {
+                set_system_volume(volume, params.relative.unwrap_or(false))
+            })
+            .await
+        } else if let Some(direction) = params.direction {
+            let volume_change = match direction.as_str() {
+                "up" => config.volume_step as f64,
+                "down" => -(config.volume_step as f64),
+                _ => {
+                    return Err(anyhow::anyhow!(
+                        "Invalid direction: {}. Use 'up' or 'down'",
+                        direction
+                    ));
+                }
+            };
+            Self::execute_with_result(|| set_system_volume(volume_change, true)).await
+        } else if let Some(mute) = params.mute {
+            Self::execute_with_result(|| set_system_mute(mute)).await
         } else {
-            Self::execute_with_result(|| set_system_mute(params.mute)).await
+            Err(anyhow::anyhow!(
+                "Must specify either volume, direction, or mute parameter"
+            ))
         }
     }
 }
@@ -32,7 +54,7 @@ pub struct Media;
 
 tool_params! {
     MediaParams,
-    required(action: string, "Media control action to perform");
+    required(action: string, "Media control action to perform"),
     optional(player: string = "".to_string(), "Specific player to control (optional, uses active player if not specified)")
 }
 

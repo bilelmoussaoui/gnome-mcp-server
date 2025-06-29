@@ -92,6 +92,7 @@ async fn get_task_objects(
 }
 
 fn parse_ical_task(ical_data: &str) -> Option<serde_json::Value> {
+    let config = crate::config::CONFIG.get_tasks_config();
     let ical = calcard::icalendar::ICalendar::parse(ical_data).ok()?;
     let component = ical.components.first()?;
 
@@ -134,13 +135,40 @@ fn parse_ical_task(ical_data: &str) -> Option<serde_json::Value> {
         .and_then(|v| v.as_text())
         .unwrap_or("NEEDS-ACTION");
 
+    let is_completed = completed.is_some();
+    let is_cancelled = status == "CANCELLED";
+
+    // Filter based on configuration
+    if !config.include_completed && is_completed {
+        return None;
+    }
+    if !config.include_cancelled && is_cancelled {
+        return None;
+    }
+
+    // Filter by due date if configured
+    if config.due_within_days > 0 {
+        if let Some(due) = component
+            .property(&calcard::icalendar::ICalendarProperty::Due)
+            .and_then(|p| p.values.first())
+            .and_then(|v| v.as_partial_date_time())
+            .and_then(|d| d.to_date_time_with_tz(calcard::common::timezone::Tz::UTC))
+        {
+            let now = chrono::Utc::now();
+            let due_limit = now + chrono::Duration::days(config.due_within_days as i64);
+            if due > due_limit {
+                return None;
+            }
+        }
+    }
+
     Some(json!({
         "summary": summary,
         "description": description,
         "due_date": due_date,
         "completed_date": completed,
         "status": status,
-        "is_completed": completed.is_some(),
+        "is_completed": is_completed,
         "uid": uid,
         "source": "evolution-tasks"
     }))

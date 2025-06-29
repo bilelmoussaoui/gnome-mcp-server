@@ -1,0 +1,21 @@
+{
+  "resources": {
+    "calendar": {
+      "days_ahead": 60,
+      "days_behind": 7
+    },
+    "tasks": {
+      "include_completed": false,
+      "include_cancelled": false,
+      "due_within_days": 7
+    }
+  },
+  "tools": {
+    "notifications": {
+      "default_timeout": 10000
+    },
+    "audio": {
+      "volume_step": 5
+    }
+  }
+}

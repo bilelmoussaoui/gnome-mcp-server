@@ -1,53 +1,7 @@
 #[macro_export]
 macro_rules! tool_params {
-    // Mixed required and optional parameters with semicolon separator
-    (
-        $struct_name:ident,
-        $(required($name:ident: $type:ident, $desc:expr)),* $(,)?
-        ; $(optional($opt_name:ident: $opt_type:ident = $default:expr, $opt_desc:expr)),* $(,)?
-    ) => {
-        #[derive(Debug)]
-        pub struct $struct_name {
-            $(pub $name: tool_params!(@rust_type $type),)*
-            $(pub $opt_name: tool_params!(@rust_type $opt_type),)*
-        }
 
-        impl $crate::mcp::ToolParams for $struct_name {
-            fn input_schema() -> serde_json::Value {
-                serde_json::json!({
-                    "type": "object",
-                    "properties": {
-                        $(
-                            stringify!($name): {
-                                "type": tool_params!(@json_type $type),
-                                "description": $desc
-                            },
-                        )*
-                        $(
-                            stringify!($opt_name): {
-                                "type": tool_params!(@json_type $opt_type),
-                                "description": $opt_desc
-                            },
-                        )*
-                    },
-                    "required": [$(stringify!($name)),*]
-                })
-            }
-
-            fn extract_params(arguments: &serde_json::Value) -> anyhow::Result<Self> {
-                Ok(Self {
-                    $(
-                        $name: tool_params!(@extract_required $type, arguments, stringify!($name))?,
-                    )*
-                    $(
-                        $opt_name: tool_params!(@extract_optional $opt_type, arguments, stringify!($opt_name), $default),
-                    )*
-                })
-            }
-        }
-    };
-
-    // Mixed required and optional parameters without semicolon separator
+    // Mixed required and optional parameters without semicolon separator (with defaults)
     (
         $struct_name:ident,
         $(required($name:ident: $type:ident, $desc:expr)),* $(,)?
@@ -94,6 +48,53 @@ macro_rules! tool_params {
         }
     };
 
+    // Mixed required and optional parameters without semicolon separator (without defaults)
+    (
+        $struct_name:ident,
+        $(required($name:ident: $type:ident, $desc:expr)),* $(,)?
+        $(optional($opt_name:ident: $opt_type:ident, $opt_desc:expr)),* $(,)?
+    ) => {
+        #[derive(Debug)]
+        pub struct $struct_name {
+            $(pub $name: tool_params!(@rust_type $type),)*
+            $(pub $opt_name: Option<tool_params!(@rust_type $opt_type)>,)*
+        }
+
+        impl $crate::mcp::ToolParams for $struct_name {
+            fn input_schema() -> serde_json::Value {
+                serde_json::json!({
+                    "type": "object",
+                    "properties": {
+                        $(
+                            stringify!($name): {
+                                "type": tool_params!(@json_type $type),
+                                "description": $desc
+                            },
+                        )*
+                        $(
+                            stringify!($opt_name): {
+                                "type": tool_params!(@json_type $opt_type),
+                                "description": $opt_desc
+                            },
+                        )*
+                    },
+                    "required": [$(stringify!($name)),*]
+                })
+            }
+
+            fn extract_params(arguments: &serde_json::Value) -> anyhow::Result<Self> {
+                Ok(Self {
+                    $(
+                        $name: tool_params!(@extract_required $type, arguments, stringify!($name))?,
+                    )*
+                    $(
+                        $opt_name: tool_params!(@extract_optional_none $opt_type, arguments, stringify!($opt_name)),
+                    )*
+                })
+            }
+        }
+    };
+
     // Only required parameters
     (
         $struct_name:ident,
@@ -130,10 +131,46 @@ macro_rules! tool_params {
         }
     };
 
-    // Only optional parameters
+    // Only optional parameters (without defaults)
     (
         $struct_name:ident,
-        ; $(optional($opt_name:ident: $opt_type:ident = $default:expr, $opt_desc:expr)),* $(,)?
+        $(optional($opt_name:ident: $opt_type:ident, $opt_desc:expr)),* $(,)?
+    ) => {
+        #[derive(Debug)]
+        pub struct $struct_name {
+            $(pub $opt_name: Option<tool_params!(@rust_type $opt_type)>,)*
+        }
+
+        impl $crate::mcp::ToolParams for $struct_name {
+            fn input_schema() -> serde_json::Value {
+                serde_json::json!({
+                    "type": "object",
+                    "properties": {
+                        $(
+                            stringify!($opt_name): {
+                                "type": tool_params!(@json_type $opt_type),
+                                "description": $opt_desc
+                            },
+                        )*
+                    },
+                    "required": []
+                })
+            }
+
+            fn extract_params(arguments: &serde_json::Value) -> anyhow::Result<Self> {
+                Ok(Self {
+                    $(
+                        $opt_name: tool_params!(@extract_optional_none $opt_type, arguments, stringify!($opt_name)),
+                    )*
+                })
+            }
+        }
+    };
+
+    // Only optional parameters (with defaults)
+    (
+        $struct_name:ident,
+        $(optional($opt_name:ident: $opt_type:ident = $default:expr, $opt_desc:expr)),* $(,)?
     ) => {
         #[derive(Debug)]
         pub struct $struct_name {
@@ -207,6 +244,20 @@ macro_rules! tool_params {
     };
     (@extract_optional i64, $args:expr, $name:expr, $default:expr) => {
         $args.get($name).and_then(|v| v.as_i64()).unwrap_or($default)
+    };
+
+    // Optional extraction without defaults (returns Option<T>)
+    (@extract_optional_none string, $args:expr, $name:expr) => {
+        $args.get($name).and_then(|v| v.as_str()).map(|s| s.to_string())
+    };
+    (@extract_optional_none bool, $args:expr, $name:expr) => {
+        $args.get($name).and_then(|v| v.as_bool())
+    };
+    (@extract_optional_none f64, $args:expr, $name:expr) => {
+        $args.get($name).and_then(|v| v.as_f64())
+    };
+    (@extract_optional_none i64, $args:expr, $name:expr) => {
+        $args.get($name).and_then(|v| v.as_i64())
     };
 }
 
@@ -380,7 +431,7 @@ mod tests {
     fn test_string_default_with_expression() {
         tool_params! {
             StringDefaultParams,
-            ; optional(prefix: string = "default".to_string(), "A string with default")
+            optional(prefix: string = "default".to_string(), "A string with default")
         }
 
         let input = json!({});
