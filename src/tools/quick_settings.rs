@@ -1,11 +1,17 @@
-use crate::mcp::ToolProvider;
+use crate::mcp::{ToolParams, ToolProvider};
+use crate::tool_params;
 use anyhow::Result;
 use gio::prelude::*;
-use serde_json::json;
 use zbus::Connection;
 
 #[derive(Default)]
 pub struct QuickSettings;
+
+tool_params! {
+    QuickSettingsParams,
+    required(setting: string, "Which boolean setting to toggle"),
+    required(enabled: bool, "true to enable, false to disable the setting")
+}
 
 impl ToolProvider for QuickSettings {
     const NAME: &'static str = "quick_settings";
@@ -13,44 +19,13 @@ impl ToolProvider for QuickSettings {
         "Toggle boolean system settings (WiFi, Bluetooth, Night Light, etc.)";
 
     fn input_schema() -> serde_json::Value {
-        json!({
-            "type": "object",
-            "properties": {
-                "setting": {
-                    "type": "string",
-                    "enum": ["wifi", "bluetooth", "night_light", "do_not_disturb", "dark_style"],
-                    "description": "Which boolean setting to toggle"
-                },
-                "enabled": {
-                    "type": "boolean",
-                    "description": "true to enable, false to disable the setting"
-                }
-            },
-            "required": ["setting", "enabled"]
-        })
+        QuickSettingsParams::input_schema()
     }
 
     async fn execute(&self, arguments: &serde_json::Value) -> Result<serde_json::Value> {
-        let setting = arguments
-            .get("setting")
-            .and_then(|v| v.as_str())
-            .ok_or_else(|| anyhow::anyhow!("Missing setting parameter"))?;
+        let params = QuickSettingsParams::extract_params(arguments)?;
 
-        let enabled = arguments
-            .get("enabled")
-            .and_then(|v| v.as_bool())
-            .ok_or_else(|| anyhow::anyhow!("Missing enabled parameter"))?;
-
-        match execute_boolean_toggle(setting, enabled).await {
-            Ok(result) => Ok(json!({
-                "success": true,
-                "result": result
-            })),
-            Err(e) => Ok(json!({
-                "success": false,
-                "error": e.to_string()
-            })),
-        }
+        Self::execute_with_result(|| execute_boolean_toggle(&params.setting, params.enabled)).await
     }
 }
 

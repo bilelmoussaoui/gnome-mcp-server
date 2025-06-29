@@ -1,58 +1,34 @@
-use crate::mcp::ToolProvider;
+use crate::mcp::{ToolParams, ToolProvider};
+use crate::tool_params;
 use anyhow::Result;
-use serde_json::json;
 use zbus::Connection;
 
 #[derive(Default)]
 pub struct Notifications;
+
+tool_params! {
+    NotificationParams,
+    required(summary: string, "Notification summary"),
+    required(body: string, "Notification body");
+    optional(timeout: i64 = 5000, "Notification timeout in milliseconds")
+}
 
 impl ToolProvider for Notifications {
     const NAME: &'static str = "send_notification";
     const DESCRIPTION: &'static str = "Send a desktop notification";
 
     fn input_schema() -> serde_json::Value {
-        json!({
-            "type": "object",
-            "properties": {
-                "summary": {
-                    "type": "string",
-                    "description": "Notification summary"
-                },
-                "body": {
-                    "type": "string",
-                    "description": "Notification body"
-                },
-                "timeout": {
-                    "type": "integer",
-                    "description": "Notification timeout in milliseconds"
-                }
-            },
-            "required": ["summary", "body"]
-        })
+        NotificationParams::input_schema()
     }
 
     async fn execute(&self, arguments: &serde_json::Value) -> Result<serde_json::Value> {
-        let summary = arguments
-            .get("summary")
-            .and_then(|v| v.as_str())
-            .ok_or_else(|| anyhow::anyhow!("Missing summary"))?;
+        let params = NotificationParams::extract_params(arguments)?;
 
-        let body = arguments
-            .get("body")
-            .and_then(|v| v.as_str())
-            .ok_or_else(|| anyhow::anyhow!("Missing body"))?;
-
-        let timeout = arguments
-            .get("timeout")
-            .and_then(|v| v.as_i64())
-            .unwrap_or(5000);
-
-        send_notification(summary, body, timeout).await?;
-
-        Ok(json!({
-            "success": true,
-            "result": format!("Notification sent: {}", summary)
-        }))
+        Self::execute_with_message(
+            || send_notification(&params.summary, &params.body, params.timeout),
+            format!("Notification sent: {}", params.summary),
+        )
+        .await
     }
 }
 

@@ -1,108 +1,76 @@
-use crate::mcp::ToolProvider;
+use crate::mcp::{ToolParams, ToolProvider};
+use crate::tool_params;
 use anyhow::Result;
-use serde_json::json;
 use zbus::Connection;
 
 #[derive(Default)]
 pub struct Volume;
+
+tool_params! {
+    VolumeParams,
+    ; optional(volume: f64 = 0.0, "Volume level (0-100, where 100 is maximum)"),
+    optional(mute: bool = false, "Mute (true) or unmute (false) the system"),
+    optional(relative: bool = false, "If true, volume is relative change (+10, -5), if false, absolute level")
+}
 
 impl ToolProvider for Volume {
     const NAME: &'static str = "set_volume";
     const DESCRIPTION: &'static str = "Control system volume and mute/unmute";
 
     fn input_schema() -> serde_json::Value {
-        json!({
-            "type": "object",
-            "properties": {
-                "volume": {
-                    "type": "number",
-                    "description": "Volume level (0-100, where 100 is maximum)",
-                    "minimum": 0,
-                    "maximum": 100
-                },
-                "mute": {
-                    "type": "boolean",
-                    "description": "Mute (true) or unmute (false) the system"
-                },
-                "relative": {
-                    "type": "boolean",
-                    "description": "If true, volume is relative change (+10, -5), if false, absolute level"
-                }
-            }
-        })
+        VolumeParams::input_schema()
     }
 
     async fn execute(&self, arguments: &serde_json::Value) -> Result<serde_json::Value> {
-        let volume = arguments.get("volume").and_then(|v| v.as_f64());
-        let mute = arguments.get("mute").and_then(|v| v.as_bool());
-        let relative = arguments
-            .get("relative")
-            .and_then(|v| v.as_bool())
-            .unwrap_or(false);
+        let params = VolumeParams::extract_params(arguments)?;
 
-        if volume.is_none() && mute.is_none() {
-            return Ok(json!({
-                "success": false,
-                "error": "Must specify either volume or mute parameter"
-            }));
+        // Check that at least one parameter was provided (not just defaults)
+        let has_volume = arguments.get("volume").is_some();
+        let has_mute = arguments.get("mute").is_some();
+
+        if !has_volume && !has_mute {
+            return Ok(Self::error_response(
+                "Must specify either volume or mute parameter",
+            ));
         }
 
-        match set_system_volume(volume, mute, relative).await {
-            Ok(result) => Ok(json!({
-                "success": true,
-                "result": result
-            })),
-            Err(e) => Ok(json!({
-                "success": false,
-                "error": e.to_string()
-            })),
-        }
+        let volume = if has_volume {
+            Some(params.volume)
+        } else {
+            None
+        };
+        let mute = if has_mute { Some(params.mute) } else { None };
+
+        Self::execute_with_result(|| set_system_volume(volume, mute, params.relative)).await
     }
 }
 
 #[derive(Default)]
 pub struct Media;
 
+tool_params! {
+    MediaParams,
+    required(action: string, "Media control action to perform");
+    optional(player: string = "".to_string(), "Specific player to control (optional, uses active player if not specified)")
+}
+
 impl ToolProvider for Media {
     const NAME: &'static str = "media_control";
     const DESCRIPTION: &'static str = "Control media playback (play, pause, skip, etc.) via MPRIS";
 
     fn input_schema() -> serde_json::Value {
-        json!({
-            "type": "object",
-            "properties": {
-                "action": {
-                    "type": "string",
-                    "enum": ["play", "pause", "play_pause", "stop", "next", "previous"],
-                    "description": "Media control action to perform"
-                },
-                "player": {
-                    "type": "string",
-                    "description": "Specific player to control (optional, uses active player if not specified)"
-                }
-            },
-            "required": ["action"]
-        })
+        MediaParams::input_schema()
     }
 
     async fn execute(&self, arguments: &serde_json::Value) -> Result<serde_json::Value> {
-        let action = arguments
-            .get("action")
-            .and_then(|v| v.as_str())
-            .ok_or_else(|| anyhow::anyhow!("Missing action parameter"))?;
+        let params = MediaParams::extract_params(arguments)?;
+        let player_ref = if params.player.is_empty() {
+            None
+        } else {
+            Some(params.player.as_str())
+        };
 
-        let player = arguments.get("player").and_then(|v| v.as_str());
-
-        match control_media_playback(action, player).await {
-            Ok(result) => Ok(json!({
-                "success": true,
-                "result": result
-            })),
-            Err(e) => Ok(json!({
-                "success": false,
-                "error": e.to_string()
-            })),
-        }
+        Self::execute_with_result(|| control_media_playback(&params.action, player_ref)).await
     }
 }
 

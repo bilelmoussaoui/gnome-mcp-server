@@ -57,6 +57,13 @@ pub trait ResourceProvider {
     async fn get_content(&self) -> Result<ResourceContent>;
 }
 
+pub trait ToolParams {
+    fn input_schema() -> serde_json::Value;
+    fn extract_params(arguments: &serde_json::Value) -> anyhow::Result<Self>
+    where
+        Self: Sized;
+}
+
 pub trait ToolProvider {
     const NAME: &'static str;
     const DESCRIPTION: &'static str;
@@ -71,4 +78,51 @@ pub trait ToolProvider {
 
     fn input_schema() -> serde_json::Value;
     async fn execute(&self, arguments: &serde_json::Value) -> Result<serde_json::Value>;
+
+    fn success_response(result: impl Into<serde_json::Value>) -> serde_json::Value {
+        serde_json::json!({
+            "success": true,
+            "result": result.into()
+        })
+    }
+
+    fn success_message(message: impl Into<String>) -> serde_json::Value {
+        serde_json::json!({
+            "success": true,
+            "result": message.into()
+        })
+    }
+
+    fn error_response(error: impl Into<String>) -> serde_json::Value {
+        serde_json::json!({
+            "success": false,
+            "error": error.into()
+        })
+    }
+
+    async fn execute_with_result<F, Fut, T>(operation: F) -> Result<serde_json::Value>
+    where
+        F: FnOnce() -> Fut,
+        Fut: std::future::Future<Output = Result<T>>,
+        T: Into<serde_json::Value>,
+    {
+        match operation().await {
+            Ok(result) => Ok(Self::success_response(result)),
+            Err(e) => Ok(Self::error_response(e.to_string())),
+        }
+    }
+
+    async fn execute_with_message<F, Fut>(
+        operation: F,
+        message: impl Into<String>,
+    ) -> Result<serde_json::Value>
+    where
+        F: FnOnce() -> Fut,
+        Fut: std::future::Future<Output = Result<()>>,
+    {
+        match operation().await {
+            Ok(_) => Ok(Self::success_message(message)),
+            Err(e) => Ok(Self::error_response(e.to_string())),
+        }
+    }
 }

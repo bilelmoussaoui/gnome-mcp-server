@@ -1,46 +1,28 @@
-use crate::mcp::ToolProvider;
+use crate::mcp::{ToolParams, ToolProvider};
+use crate::tool_params;
 use anyhow::Result;
 use gio::prelude::*;
-use serde_json::json;
 
 #[derive(Default)]
 pub struct OpenFile;
+
+tool_params! {
+    OpenFileParams,
+    required(path: string, "File path or URL to open (e.g., '/home/user/document.pdf', 'https://example.com')")
+}
 
 impl ToolProvider for OpenFile {
     const NAME: &'static str = "open_file";
     const DESCRIPTION: &'static str = "Open a file or URL with the default application";
 
     fn input_schema() -> serde_json::Value {
-        json!({
-            "type": "object",
-            "properties": {
-                "path": {
-                    "type": "string",
-                    "description": "File path or URL to open (e.g., '/home/user/document.pdf', 'https://example.com')"
-                }
-            },
-            "required": ["path"]
-        })
+        OpenFileParams::input_schema()
     }
 
     async fn execute(&self, arguments: &serde_json::Value) -> Result<serde_json::Value> {
-        let path = arguments
-            .get("path")
-            .and_then(|v| v.as_str())
-            .ok_or_else(|| anyhow::anyhow!("Missing path"))?;
+        let params = OpenFileParams::extract_params(arguments)?;
 
-        match open_file(path).await {
-            Ok(result) => Ok(json!({
-                "success": true,
-                "result": format!("Opened: {}", path),
-                "debug": result
-            })),
-            Err(e) => Ok(json!({
-                "success": false,
-                "error": e.to_string(),
-                "debug": format!("Failed to open: {}", path)
-            })),
-        }
+        Self::execute_with_result(|| open_file(&params.path)).await
     }
 }
 

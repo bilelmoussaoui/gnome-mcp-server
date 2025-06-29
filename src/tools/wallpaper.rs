@@ -1,58 +1,46 @@
-use crate::mcp::ToolProvider;
+use crate::mcp::{ToolParams, ToolProvider};
+use crate::tool_params;
 use anyhow::Result;
-use serde_json::json;
 use zbus::Connection;
 
 #[derive(Default)]
 pub struct Wallpaper;
+
+tool_params! {
+    WallpaperParams,
+    required(image_path: string, "Full path to the image file (e.g., '/tmp/wallpaper.jpg', '/home/user/Pictures/photo.png')")
+}
 
 impl ToolProvider for Wallpaper {
     const NAME: &'static str = "set_wallpaper";
     const DESCRIPTION: &'static str = "Set the desktop wallpaper from a local file path";
 
     fn input_schema() -> serde_json::Value {
-        json!({
-            "type": "object",
-            "properties": {
-                "image_path": {
-                    "type": "string",
-                    "description": "Full path to the image file (e.g., '/tmp/wallpaper.jpg', '/home/user/Pictures/photo.png')"
-                }
-            },
-            "required": ["image_path"]
-        })
+        WallpaperParams::input_schema()
     }
 
     async fn execute(&self, arguments: &serde_json::Value) -> Result<serde_json::Value> {
-        let image_path = arguments
-            .get("image_path")
-            .and_then(|v| v.as_str())
-            .ok_or_else(|| anyhow::anyhow!("Missing image_path"))?;
+        let params = WallpaperParams::extract_params(arguments)?;
         // Validate file exists and is an image
-        validate_image_file(image_path)?;
+        validate_image_file(&params.image_path)?;
 
         // Convert to file:// URI format
-        let image_uri = if image_path.starts_with("file://") {
-            image_path.to_string()
+        let image_uri = if params.image_path.starts_with("file://") {
+            params.image_path.clone()
         } else {
             format!(
                 "file://{}",
-                std::path::Path::new(image_path).canonicalize()?.display()
+                std::path::Path::new(&params.image_path)
+                    .canonicalize()?
+                    .display()
             )
         };
 
-        match set_wallpaper(&image_uri).await {
-            Ok(result) => Ok(json!({
-                "success": true,
-                "result": format!("Wallpaper set to: {}", image_path),
-                "details": result
-            })),
-            Err(e) => Ok(json!({
-                "success": false,
-                "error": e.to_string(),
-                "debug": format!("Failed to set wallpaper: {}", image_path)
-            })),
-        }
+        Self::execute_with_message(
+            || set_wallpaper(&image_uri),
+            format!("Wallpaper set to: {}", params.image_path),
+        )
+        .await
     }
 }
 
@@ -82,7 +70,7 @@ fn validate_image_file(image_path: &str) -> Result<()> {
     Ok(())
 }
 
-async fn set_wallpaper(image_uri: &str) -> Result<String> {
+async fn set_wallpaper(image_uri: &str) -> Result<()> {
     let connection = Connection::session().await?;
 
     // Use XDG Desktop Portal Wallpaper interface
@@ -99,14 +87,8 @@ async fn set_wallpaper(image_uri: &str) -> Result<String> {
     let parent_window = ""; // Empty string for no parent window
     let options = std::collections::HashMap::<String, zbus::zvariant::Value>::new();
 
-    match proxy
+    proxy
         .call_method("SetWallpaperURI", &(parent_window, image_uri, options))
-        .await
-    {
-        Ok(_) => {
-            // The portal returns a request handle, but for wallpaper it should be immediate
-            Ok("Set via XDG Desktop Portal".to_string())
-        }
-        Err(e) => Err(anyhow::anyhow!("Wallpaper portal call failed: {}", e)),
-    }
+        .await?;
+    Ok(())
 }
