@@ -330,6 +330,14 @@ mod tests {
             "required": ["message", "urgent"]
         });
         assert_eq!(schema, expected);
+        let input = json!({
+            "message": "test",
+            "urgent": true,
+        });
+
+        let params = RequiredOnlyParams::extract_params(&input).unwrap();
+        assert_eq!(params.message, "test");
+        assert!(params.urgent);
     }
 
     #[test]
@@ -362,7 +370,7 @@ mod tests {
 
         let params = TestParams::extract_params(&input).unwrap();
         assert_eq!(params.name, "test");
-        assert_eq!(params.enabled, true);
+        assert!(params.enabled);
         assert_eq!(params.count, 42);
     }
 
@@ -376,7 +384,7 @@ mod tests {
 
         let params = TestParams::extract_params(&input).unwrap();
         assert_eq!(params.name, "test");
-        assert_eq!(params.enabled, false);
+        assert!(!params.enabled);
         assert_eq!(params.count, 10); // default value
     }
 
@@ -399,7 +407,7 @@ mod tests {
 
         let params = OptionalOnlyParams::extract_params(&input).unwrap();
         assert_eq!(params.timeout, 5000);
-        assert_eq!(params.debug, false);
+        assert!(!params.debug);
     }
 
     #[test]
@@ -411,7 +419,7 @@ mod tests {
 
         let params = OptionalOnlyParams::extract_params(&input).unwrap();
         assert_eq!(params.timeout, 1000);
-        assert_eq!(params.debug, true);
+        assert!(params.debug);
     }
 
     #[test]
@@ -449,7 +457,7 @@ mod tests {
 
         let params = TestParams::extract_params(&input).unwrap();
         assert_eq!(params.name, "test");
-        assert_eq!(params.enabled, true);
+        assert!(params.enabled);
         assert_eq!(params.count, 99);
     }
 }

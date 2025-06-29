@@ -77,12 +77,12 @@ impl ToolProvider for Media {
 async fn set_system_volume(volume: f64, relative: bool) -> Result<String> {
     let volume_str = if relative {
         if volume >= 0.0 {
-            format!("{}%+", volume)
+            format!("{volume}%+")
         } else {
             format!("{}%-", volume.abs())
         }
     } else {
-        format!("{}%", volume)
+        format!("{volume}%")
     };
 
     // Try wpctl (WirePlumber control)
@@ -98,7 +98,7 @@ async fn set_system_volume(volume: f64, relative: bool) -> Result<String> {
         ));
     }
 
-    Ok(format!("PipeWire: Volume set to {}", volume_str))
+    Ok(format!("PipeWire: Volume set to {volume_str}"))
 }
 
 async fn set_system_mute(mute: bool) -> Result<String> {
@@ -155,27 +155,27 @@ async fn control_media_playback(action: &str, player: Option<&str>) -> Result<St
     match action {
         "play" => {
             player_proxy.call_method("Play", &()).await?;
-            Ok(format!("Started playback on {}", target_player))
+            Ok(format!("Started playback on {target_player}"))
         }
         "pause" => {
             player_proxy.call_method("Pause", &()).await?;
-            Ok(format!("Paused playback on {}", target_player))
+            Ok(format!("Paused playback on {target_player}"))
         }
         "play_pause" => {
             player_proxy.call_method("PlayPause", &()).await?;
-            Ok(format!("Toggled playback on {}", target_player))
+            Ok(format!("Toggled playback on {target_player}"))
         }
         "stop" => {
             player_proxy.call_method("Stop", &()).await?;
-            Ok(format!("Stopped playback on {}", target_player))
+            Ok(format!("Stopped playback on {target_player}"))
         }
         "next" => {
             player_proxy.call_method("Next", &()).await?;
-            Ok(format!("Skipped to next track on {}", target_player))
+            Ok(format!("Skipped to next track on {target_player}"))
         }
         "previous" => {
             player_proxy.call_method("Previous", &()).await?;
-            Ok(format!("Skipped to previous track on {}", target_player))
+            Ok(format!("Skipped to previous track on {target_player}"))
         }
         _ => Err(anyhow::anyhow!("Unknown action: {}", action)),
     }

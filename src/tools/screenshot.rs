@@ -36,11 +36,10 @@ async fn take_screenshot_portal(interactive: bool) -> Result<String> {
             let uri = response.uri();
             if interactive {
                 Ok(format!(
-                    "Interactive screenshot completed. File saved to: {}",
-                    uri
+                    "Interactive screenshot completed. File saved to: {uri}"
                 ))
             } else {
-                Ok(format!("Screenshot taken. File saved to: {}", uri))
+                Ok(format!("Screenshot taken. File saved to: {uri}"))
             }
         }
         Err(error) => Err(anyhow::anyhow!(

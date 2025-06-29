@@ -99,17 +99,11 @@ impl Default for AudioToolConfig {
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct QuickSettingsConfig {}
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct ScreenshotConfig {
     /// Show interactive dialog by default
     #[serde(default)]
     pub interactive: bool,
-}
-
-impl Default for ScreenshotConfig {
-    fn default() -> Self {
-        Self { interactive: false }
-    }
 }
 
 // Container structs
