@@ -1,7 +1,6 @@
 use crate::mcp::ToolProvider;
 use crate::tool_params;
 use anyhow::Result;
-use zbus::Connection;
 
 #[derive(Default)]
 pub struct Wallpaper;
@@ -67,24 +66,9 @@ fn validate_image_file(image_path: &str) -> Result<()> {
 }
 
 async fn set_wallpaper(image_uri: &str) -> Result<()> {
-    let connection = Connection::session().await?;
-
-    // Use XDG Desktop Portal Wallpaper interface
-    let proxy = zbus::Proxy::new(
-        &connection,
-        "org.freedesktop.portal.Desktop",
-        "/org/freedesktop/portal/desktop",
-        "org.freedesktop.portal.Wallpaper",
-    )
-    .await?;
-
-    // The Wallpaper portal SetWallpaperURI method
-    // Parameters: (parent_window, uri, options)
-    let parent_window = ""; // Empty string for no parent window
-    let options = std::collections::HashMap::<String, zbus::zvariant::Value>::new();
-
-    proxy
-        .call_method("SetWallpaperURI", &(parent_window, image_uri, options))
-        .await?;
+    ashpd::desktop::wallpaper::WallpaperRequest::default()
+        .build_uri(&ashpd::url::Url::parse(image_uri).unwrap())
+        .await?
+        .response()?;
     Ok(())
 }
