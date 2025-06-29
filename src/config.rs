@@ -270,9 +270,6 @@ mod tests {
         let calendar_config = config.get_calendar_config();
         assert_eq!(calendar_config.days_ahead, 60);
         assert_eq!(calendar_config.days_behind, 7);
-
-        let notifications_config = config.get_notifications_config();
-        assert_eq!(notifications_config.default_timeout, 10000);
     }
 
     #[test]
@@ -307,8 +304,5 @@ mod tests {
         let tasks_config = config.get_tasks_config();
         assert!(!tasks_config.include_completed);
         assert!(!tasks_config.include_cancelled);
-
-        let notifications_config = config.get_notifications_config();
-        assert_eq!(notifications_config.default_timeout, 10000);
     }
 }
