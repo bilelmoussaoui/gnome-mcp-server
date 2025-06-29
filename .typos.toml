@@ -1,0 +1,22 @@
+[files]
+# Extend defaults
+extend-exclude = [
+  "target/",
+  "Cargo.lock",
+  "*.png",
+  "*.jpg",
+  "*.jpeg",
+  "*.gif",
+  "*.ico",
+  "*.pdf",
+]
+
+[default.extend-words]
+# Add project-specific words that aren't typos
+gnome = "gnome"
+mcp = "mcp"
+dbus = "dbus"
+wpctl = "wpctl"
+zbus = "zbus"
+icalendar = "icalendar"
+MPRIS = "MPRIS"

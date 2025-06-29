@@ -1,0 +1,66 @@
+# cargo-deny configuration
+
+[licenses]
+# Allow specific licenses
+allow = [
+    "Apache-2.0",
+    "Apache-2.0 WITH LLVM-exception",
+    "MIT",
+    "BSD-3-Clause",
+    "Unicode-3.0",
+]
+# Confidence threshold for detecting a license from a license text.
+confidence-threshold = 0.8
+
+[bans]
+# Lint level for when multiple versions of the same crate are detected
+multiple-versions = "warn"
+# Lint level for when a crate version requirement is `*`
+wildcards = "allow"
+# The graph highlighting used when creating dotgraphs for crates
+highlight = "all"
+# List of crates that are allowed. Use with care!
+allow = []
+skip = [
+    # Skip older regex-automata version (keep 0.4.9, skip 0.1.10)
+    {name = "regex-automata", version = "0.1.10"},
+
+    # Skip older regex-syntax version (keep 0.8.5, skip 0.6.29)
+    {name = "regex-syntax", version = "0.6.29"},
+
+    # Skip older wasi version (keep 0.14.2, skip 0.11.1)
+    {name = "wasi", version = "0.11.1+wasi-snapshot-preview1"},
+
+    # Skip older windows-sys version (keep 0.60.2, skip 0.52.0 and 0.59.0)
+    {name = "windows-sys", version = "0.52.0"},
+    {name = "windows-sys", version = "0.59.0"},
+
+    # Skip older windows-targets version (keep 0.53.2, skip 0.52.6)
+    {name = "windows-targets", version = "0.52.6"},
+
+    # Skip older windows platform-specific crates (keep 0.53.0 versions, skip 0.52.6)
+    {name = "windows_aarch64_gnullvm", version = "0.52.6"},
+    {name = "windows_aarch64_msvc", version = "0.52.6"},
+    {name = "windows_i686_gnu", version = "0.52.6"},
+    {name = "windows_i686_gnullvm", version = "0.52.6"},
+    {name = "windows_i686_msvc", version = "0.52.6"},
+    {name = "windows_x86_64_gnu", version = "0.52.6"},
+    {name = "windows_x86_64_gnullvm", version = "0.52.6"},
+    {name = "windows_x86_64_msvc", version = "0.52.6"},
+]
+
+
+[advisories]
+# The path where the advisory database is cloned/fetched into
+db-path = "~/.cargo/advisory-db"
+# The url(s) of the advisory databases to use
+db-urls = ["https://github.com/rustsec/advisory-db"]
+# A list of advisory IDs to ignore. Note that ignored advisories will still
+# output a note when they are encountered.
+ignore = []
+
+[sources]
+unknown-registry = "deny"
+unknown-git = "deny"
+allow-git = [
+]
