@@ -21,6 +21,7 @@ register_providers! {
         crate::tools::audio::Media,
         crate::tools::quick_settings::QuickSettings,
         crate::tools::screenshot::Screenshot,
+        crate::tools::window_management::WindowManagement,
     ]
 }
 
