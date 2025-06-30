@@ -8,7 +8,7 @@ pub struct QuickSettings;
 
 tool_params! {
     QuickSettingsParams,
-    required(setting: string, "Which boolean setting to toggle"),
+    required(setting: string, "Which boolean setting to toggle. Supported options: wifi/bluetooth/night_light/do_not_disturb/dark_style"),
     required(enabled: bool, "true to enable, false to disable the setting")
 }
 
