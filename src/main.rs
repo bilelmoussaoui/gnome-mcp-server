@@ -12,7 +12,11 @@ async fn main() -> anyhow::Result<()> {
         .init();
 
     // Register as a host application, given that we use some portals.
-    ashpd::register_host_app("com.belmoussaoui.gnome-mcp-server".try_into().unwrap()).await?;
+    if let Err(err) =
+        ashpd::register_host_app("com.belmoussaoui.gnome-mcp-server".try_into().unwrap()).await
+    {
+        tracing::warn!("Failed to register host app: {}", err);
+    }
 
     mcp::Server::run().await
 }
