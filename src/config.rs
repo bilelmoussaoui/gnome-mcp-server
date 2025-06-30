@@ -95,6 +95,9 @@ pub struct ScreenshotConfig {
     pub interactive: bool,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+pub struct WindowManagementConfig {}
+
 // Container structs
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ResourcesConfig {
@@ -126,6 +129,7 @@ pub struct ToolsConfig {
     pub audio: Option<AudioToolConfig>,
     pub quick_settings: Option<QuickSettingsConfig>,
     pub screenshot: Option<ScreenshotConfig>,
+    pub window_management: Option<WindowManagementConfig>,
 }
 
 impl Default for ToolsConfig {
@@ -138,6 +142,7 @@ impl Default for ToolsConfig {
             audio: Some(AudioToolConfig::default()),
             quick_settings: Some(QuickSettingsConfig::default()),
             screenshot: Some(ScreenshotConfig::default()),
+            window_management: Some(WindowManagementConfig::default()),
         }
     }
 }
