@@ -10,6 +10,7 @@ register_providers! {
         crate::resources::applications::Applications,
         crate::resources::calendar::Calendar,
         crate::resources::tasks::Tasks,
+        crate::resources::contacts::Contacts,
         crate::resources::audio::Audio,
     ],
     tools: [

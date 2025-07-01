@@ -30,6 +30,13 @@ By default, all tools and resources are enabled. Create a configuration file to 
 }
 ```
 
+#### Contacts
+```json
+"contacts": {
+  "email_only": false         // Include only contacts with emails (default: false)
+}
+```
+
 ### Tools
 
 #### `send_notification`

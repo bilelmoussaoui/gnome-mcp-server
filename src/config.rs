@@ -52,6 +52,13 @@ impl Default for TasksConfig {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
+pub struct ContactsConfig {
+    /// Include only contacts with email addresses
+    #[serde(default)]
+    pub email_only: bool,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct SystemInfoConfig {}
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
@@ -105,6 +112,7 @@ pub struct ResourcesConfig {
     pub applications: Option<ApplicationsResourceConfig>,
     pub calendar: Option<CalendarConfig>,
     pub tasks: Option<TasksConfig>,
+    pub contacts: Option<ContactsConfig>,
     pub audio: Option<AudioResourceConfig>,
 }
 
@@ -115,6 +123,7 @@ impl Default for ResourcesConfig {
             applications: Some(ApplicationsResourceConfig::default()),
             calendar: Some(CalendarConfig::default()),
             tasks: Some(TasksConfig::default()),
+            contacts: Some(ContactsConfig::default()),
             audio: Some(AudioResourceConfig::default()),
         }
     }
@@ -200,6 +209,7 @@ impl Config {
             }
             crate::resources::calendar::Calendar::NAME => self.resources.calendar.is_some(),
             crate::resources::tasks::Tasks::NAME => self.resources.tasks.is_some(),
+            crate::resources::contacts::Contacts::NAME => self.resources.contacts.is_some(),
             crate::resources::audio::Audio::NAME => self.resources.audio.is_some(),
             _ => true, // Unknown resources are enabled by default
         }
@@ -232,6 +242,10 @@ impl Config {
 
     pub fn get_tasks_config(&self) -> TasksConfig {
         self.resources.tasks.clone().unwrap_or_default()
+    }
+
+    pub fn get_contacts_config(&self) -> ContactsConfig {
+        self.resources.contacts.clone().unwrap_or_default()
     }
 
     pub fn get_audio_tool_config(&self) -> AudioToolConfig {

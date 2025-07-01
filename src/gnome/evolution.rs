@@ -136,3 +136,20 @@ pub async fn open_task_list_source(
     let (task_list_path, bus_name) = response.body().deserialize::<(String, String)>()?;
     Ok((task_list_path, bus_name))
 }
+
+pub async fn open_address_book_source(
+    connection: &zbus::Connection,
+    source_uid: &str,
+) -> Result<(String, String)> {
+    let proxy = zbus::Proxy::new(
+        connection,
+        "org.gnome.evolution.dataserver.AddressBook10",
+        "/org/gnome/evolution/dataserver/AddressBookFactory",
+        "org.gnome.evolution.dataserver.AddressBookFactory",
+    )
+    .await?;
+
+    let response = proxy.call_method("OpenAddressBook", &(source_uid,)).await?;
+    let (address_book_path, bus_name) = response.body().deserialize::<(String, String)>()?;
+    Ok((address_book_path, bus_name))
+}
