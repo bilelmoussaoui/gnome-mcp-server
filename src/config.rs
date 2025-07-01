@@ -218,6 +218,9 @@ impl Config {
                 self.tools.quick_settings.is_some()
             }
             crate::tools::screenshot::Screenshot::NAME => self.tools.screenshot.is_some(),
+            crate::tools::window_management::WindowManagement::NAME => {
+                self.tools.window_management.is_some()
+            }
             _ => true, // Unknown tools are enabled by default
         }
     }
