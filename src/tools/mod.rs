@@ -1,5 +1,6 @@
 pub mod applications;
 pub mod audio;
+pub mod keyring;
 pub mod notifications;
 pub mod open_file;
 pub mod quick_settings;

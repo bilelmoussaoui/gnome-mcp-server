@@ -23,6 +23,7 @@ register_providers! {
         crate::tools::quick_settings::QuickSettings,
         crate::tools::screenshot::Screenshot,
         crate::tools::window_management::WindowManagement,
+        crate::tools::keyring::Keyring,
     ]
 }
 

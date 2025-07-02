@@ -11,6 +11,7 @@ ashpd = "0.11"
 calcard = "0.1"
 chrono = "0.4"
 gio = "0.20"
+oo7 = "0.4"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 tokio = { version = "1.0", features = ["full"] }

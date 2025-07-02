@@ -105,6 +105,9 @@ pub struct ScreenshotConfig {
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct WindowManagementConfig {}
 
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+pub struct KeyringConfig {}
+
 // Container structs
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ResourcesConfig {
@@ -139,6 +142,7 @@ pub struct ToolsConfig {
     pub quick_settings: Option<QuickSettingsConfig>,
     pub screenshot: Option<ScreenshotConfig>,
     pub window_management: Option<WindowManagementConfig>,
+    pub keyring: Option<KeyringConfig>,
 }
 
 impl Default for ToolsConfig {
@@ -152,6 +156,7 @@ impl Default for ToolsConfig {
             quick_settings: Some(QuickSettingsConfig::default()),
             screenshot: Some(ScreenshotConfig::default()),
             window_management: Some(WindowManagementConfig::default()),
+            keyring: Some(KeyringConfig::default()),
         }
     }
 }
@@ -231,6 +236,7 @@ impl Config {
             crate::tools::window_management::WindowManagement::NAME => {
                 self.tools.window_management.is_some()
             }
+            crate::tools::keyring::Keyring::NAME => self.tools.keyring.is_some(),
             _ => true, // Unknown tools are enabled by default
         }
     }

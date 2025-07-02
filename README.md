@@ -96,6 +96,24 @@ Config:
 
 **Requirements**: GNOME Shell unsafe mode: `Alt+F2` → `lg` → `global.context.unsafe_mode = true`
 
+#### `keyring`
+- **action** (string, required): store, retrieve, delete
+- **label** (string, optional): Human-readable label for the secret (required for store action)
+- **secret** (string, optional): The secret value to store (required for store action)
+- **attributes** (string, optional): JSON object of key-value attributes for categorizing/searching secrets (e.g., `{"application": "myapp", "username": "user"}`)
+
+**Examples**:
+```json
+// Store a secret
+{"action": "store", "label": "GitHub Token", "secret": "ghp_xxx", "attributes": "{\"service\": \"github\", \"user\": \"myuser\"}"}
+
+// Retrieve by service
+{"action": "retrieve", "attributes": "{\"service\": \"github\"}"}
+
+// Delete by user
+{"action": "delete", "attributes": "{\"user\": \"myuser\"}"}
+```
+
 ### Tool/Resource Enabling
 - Include config section to enable: `"calendar": {}`
 - Omit section to disable

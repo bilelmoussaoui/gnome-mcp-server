@@ -47,6 +47,11 @@ skip = [
     {name = "windows_x86_64_gnu", version = "0.52.6"},
     {name = "windows_x86_64_gnullvm", version = "0.52.6"},
     {name = "windows_x86_64_msvc", version = "0.52.6"},
+
+    {name = "getrandom", version = "0.2.16"},
+    {name = "rand", version = "0.8.5"},
+    {name = "rand_chacha", version = "0.3.1"},
+    {name = "rand_core", version = "0.6.4"},
 ]
 
 
