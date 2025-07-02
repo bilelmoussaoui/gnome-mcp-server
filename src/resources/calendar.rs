@@ -1,8 +1,10 @@
+use std::str::FromStr;
+
 use anyhow::Result;
 use serde_json::json;
 
 use crate::{
-    gnome::evolution::SourceType,
+    gnome::evolution::{Event, SourceType},
     mcp::{ResourceContent, ResourceProvider},
 };
 
@@ -18,7 +20,7 @@ impl ResourceProvider for Calendar {
         let events = get_calendar_events().await?;
 
         let events_json = json!({
-            "events": events,
+            "events": events.iter().map(|e| e.to_json()).collect::<Vec<_>>(),
             "count": events.len()
         });
 
@@ -30,7 +32,7 @@ impl ResourceProvider for Calendar {
     }
 }
 
-pub async fn get_calendar_events() -> Result<Vec<serde_json::Value>> {
+pub async fn get_calendar_events() -> Result<Vec<Event>> {
     let connection = zbus::Connection::session().await?;
 
     // Step 1: Get managed objects from SourceManager
@@ -49,16 +51,6 @@ pub async fn get_calendar_events() -> Result<Vec<serde_json::Value>> {
         }
     }
 
-    if all_events.is_empty() {
-        all_events.push(json!({
-            "summary": "Evolution Data Server",
-            "description": "Connected to EDS but no calendar events found",
-            "start_time": chrono::Utc::now().to_rfc3339(),
-            "source": "evolution-data-server",
-            "status": "No events or calendars configured"
-        }));
-    }
-
     Ok(all_events)
 }
 
@@ -66,7 +58,7 @@ async fn get_calendar_objects(
     connection: &zbus::Connection,
     calendar_path: &str,
     bus_name: &str,
-) -> Result<Vec<serde_json::Value>> {
+) -> Result<Vec<Event>> {
     let mut events = Vec::new();
 
     let proxy = zbus::Proxy::new(
@@ -93,53 +85,10 @@ async fn get_calendar_objects(
     let ical_objects = response.body().deserialize::<Vec<String>>()?;
 
     for ical_data in ical_objects {
-        if let Some(event) = parse_ical_event(&ical_data) {
+        if let Ok(event) = Event::from_str(&ical_data) {
             events.push(event);
         }
     }
 
     Ok(events)
-}
-
-fn parse_ical_event(ical_data: &str) -> Option<serde_json::Value> {
-    let ical = calcard::icalendar::ICalendar::parse(ical_data).ok()?;
-    let component = ical.components.first()?;
-    let uid = component
-        .property(&calcard::icalendar::ICalendarProperty::Uid)
-        .and_then(|p| p.values.first())
-        .and_then(|v| v.as_text())
-        .unwrap_or_default();
-    let summary = component
-        .property(&calcard::icalendar::ICalendarProperty::Summary)
-        .and_then(|p| p.values.first())
-        .and_then(|v| v.as_text())
-        .unwrap_or_default();
-    let description = component
-        .property(&calcard::icalendar::ICalendarProperty::Description)
-        .and_then(|p| p.values.first())
-        .and_then(|v| v.as_text())
-        .unwrap_or_default();
-    let start_time = component
-        .property(&calcard::icalendar::ICalendarProperty::Dtstart)
-        .and_then(|p| p.values.first())
-        .and_then(|v| v.as_partial_date_time())
-        .and_then(|d| d.to_date_time_with_tz(calcard::common::timezone::Tz::UTC))
-        .map(|d| d.to_string())
-        .unwrap_or_default();
-    let end_time = component
-        .property(&calcard::icalendar::ICalendarProperty::Dtend)
-        .and_then(|p| p.values.first())
-        .and_then(|v| v.as_partial_date_time())
-        .and_then(|d| d.to_date_time_with_tz(calcard::common::timezone::Tz::UTC))
-        .map(|d| d.to_string())
-        .unwrap_or_default();
-
-    Some(json!({
-        "summary": summary,
-        "description": description,
-        "start_time": start_time,
-        "end_time": end_time,
-        "uid": uid,
-        "source": "evolution-calendar"
-    }))
 }

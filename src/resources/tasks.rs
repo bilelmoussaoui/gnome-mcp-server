@@ -1,8 +1,10 @@
+use std::str::FromStr;
+
 use anyhow::Result;
 use serde_json::json;
 
 use crate::{
-    gnome::evolution::{get_evolution_sources, open_task_list_source, SourceType},
+    gnome::evolution::{get_evolution_sources, open_task_list_source, SourceType, Task},
     mcp::{ResourceContent, ResourceProvider},
 };
 
@@ -18,7 +20,7 @@ impl ResourceProvider for Tasks {
         let tasks = get_task_lists().await?;
 
         let tasks_json = json!({
-            "tasks": tasks,
+            "tasks": tasks.iter().map(|t| t.to_json()).collect::<Vec<_>>(),
             "count": tasks.len()
         });
 
@@ -30,7 +32,7 @@ impl ResourceProvider for Tasks {
     }
 }
 
-pub async fn get_task_lists() -> Result<Vec<serde_json::Value>> {
+pub async fn get_task_lists() -> Result<Vec<Task>> {
     let connection = zbus::Connection::session().await?;
     let sources = get_evolution_sources(&connection).await?;
     let mut all_tasks = Vec::new();
@@ -50,16 +52,6 @@ pub async fn get_task_lists() -> Result<Vec<serde_json::Value>> {
         }
     }
 
-    if all_tasks.is_empty() {
-        all_tasks.push(json!({
-            "summary": "No Tasks Found",
-            "description": "Connected to EDS but no tasks found",
-            "created_time": chrono::Utc::now().to_rfc3339(),
-            "source": "evolution-data-server",
-            "status": "No tasks or task lists configured"
-        }));
-    }
-
     Ok(all_tasks)
 }
 
@@ -67,7 +59,7 @@ async fn get_task_objects(
     connection: &zbus::Connection,
     task_list_path: &str,
     bus_name: &str,
-) -> Result<Vec<serde_json::Value>> {
+) -> Result<Vec<Task>> {
     let mut tasks = Vec::new();
 
     let proxy = zbus::Proxy::new(
@@ -84,92 +76,31 @@ async fn get_task_objects(
     tracing::info!("Found {} tasks", ical_objects.len());
 
     for ical_data in ical_objects {
-        if let Some(task) = parse_ical_task(&ical_data) {
+        if let Ok(task) = Task::from_str(&ical_data) {
+            // Apply configuration filtering
+            let config = crate::config::CONFIG.get_tasks_config();
+
+            // Filter based on configuration
+            if !config.include_completed && task.is_completed() {
+                continue;
+            }
+            if !config.include_cancelled && task.is_cancelled() {
+                continue;
+            }
+
+            // Filter by due date if configured
+            if config.due_within_days > 0 {
+                if let Some(due_date) = task.due_date {
+                    let now = chrono::Utc::now();
+                    let due_limit = now + chrono::Duration::days(config.due_within_days as i64);
+                    if due_date > due_limit {
+                        continue;
+                    }
+                }
+            }
+
             tasks.push(task);
         }
     }
     Ok(tasks)
-}
-
-fn parse_ical_task(ical_data: &str) -> Option<serde_json::Value> {
-    let config = crate::config::CONFIG.get_tasks_config();
-    let ical = calcard::icalendar::ICalendar::parse(ical_data).ok()?;
-    let component = ical.components.first()?;
-
-    let uid = component
-        .property(&calcard::icalendar::ICalendarProperty::Uid)
-        .and_then(|p| p.values.first())
-        .and_then(|v| v.as_text())
-        .unwrap_or_default();
-
-    let summary = component
-        .property(&calcard::icalendar::ICalendarProperty::Summary)
-        .and_then(|p| p.values.first())
-        .and_then(|v| v.as_text())
-        .unwrap_or_default();
-
-    let description = component
-        .property(&calcard::icalendar::ICalendarProperty::Description)
-        .and_then(|p| p.values.first())
-        .and_then(|v| v.as_text())
-        .unwrap_or_default();
-
-    let due_date = component
-        .property(&calcard::icalendar::ICalendarProperty::Due)
-        .and_then(|p| p.values.first())
-        .and_then(|v| v.as_partial_date_time())
-        .and_then(|d| d.to_date_time_with_tz(calcard::common::timezone::Tz::UTC))
-        .map(|d| d.to_string())
-        .unwrap_or_default();
-
-    let completed = component
-        .property(&calcard::icalendar::ICalendarProperty::Completed)
-        .and_then(|p| p.values.first())
-        .and_then(|v| v.as_partial_date_time())
-        .and_then(|d| d.to_date_time_with_tz(calcard::common::timezone::Tz::UTC))
-        .map(|d| d.to_string());
-
-    let status = component
-        .property(&calcard::icalendar::ICalendarProperty::Status)
-        .and_then(|p| p.values.first())
-        .and_then(|v| v.as_text())
-        .unwrap_or("NEEDS-ACTION");
-
-    let is_completed = completed.is_some();
-    let is_cancelled = status == "CANCELLED";
-
-    // Filter based on configuration
-    if !config.include_completed && is_completed {
-        return None;
-    }
-    if !config.include_cancelled && is_cancelled {
-        return None;
-    }
-
-    // Filter by due date if configured
-    if config.due_within_days > 0 {
-        if let Some(due) = component
-            .property(&calcard::icalendar::ICalendarProperty::Due)
-            .and_then(|p| p.values.first())
-            .and_then(|v| v.as_partial_date_time())
-            .and_then(|d| d.to_date_time_with_tz(calcard::common::timezone::Tz::UTC))
-        {
-            let now = chrono::Utc::now();
-            let due_limit = now + chrono::Duration::days(config.due_within_days as i64);
-            if due > due_limit {
-                return None;
-            }
-        }
-    }
-
-    Some(json!({
-        "summary": summary,
-        "description": description,
-        "due_date": due_date,
-        "completed_date": completed,
-        "status": status,
-        "is_completed": is_completed,
-        "uid": uid,
-        "source": "evolution-tasks"
-    }))
 }
