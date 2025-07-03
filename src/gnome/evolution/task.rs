@@ -12,6 +12,15 @@ pub struct Task {
     pub completed_date: Option<DateTime<Utc>>,
     pub status: String,
     pub uid: String,
+    pub start_date: Option<DateTime<Utc>>,
+    pub priority: Option<u32>,
+    pub categories: Vec<String>,
+    pub percent_complete: Option<u32>,
+    pub created: Option<DateTime<Utc>>,
+    pub last_modified: Option<DateTime<Utc>>,
+    pub location: Option<String>,
+    pub url: Option<String>,
+    pub class: Option<String>, // PUBLIC/PRIVATE/CONFIDENTIAL
 }
 
 impl Task {
@@ -173,6 +182,68 @@ impl FromStr for Task {
             .unwrap_or("NEEDS-ACTION")
             .to_string();
 
+        let start_date = todo_component
+            .property(&calcard::icalendar::ICalendarProperty::Dtstart)
+            .and_then(|p| p.values.first())
+            .and_then(|v| v.as_partial_date_time())
+            .and_then(|d| d.to_date_time_with_tz(calcard::common::timezone::Tz::UTC))
+            .map(|dt| dt.with_timezone(&Utc));
+
+        let priority = todo_component
+            .property(&calcard::icalendar::ICalendarProperty::Priority)
+            .and_then(|p| p.values.first())
+            .and_then(|v| v.as_integer())
+            .map(|i| i as u32);
+
+        let categories: Vec<String> = todo_component
+            .properties(&calcard::icalendar::ICalendarProperty::Categories)
+            .flat_map(|p| &p.values)
+            .filter_map(|v| v.as_text())
+            .filter(|s| !s.is_empty())
+            .map(|s| s.to_string())
+            .collect();
+
+        let percent_complete = todo_component
+            .property(&calcard::icalendar::ICalendarProperty::PercentComplete)
+            .and_then(|p| p.values.first())
+            .and_then(|v| v.as_integer())
+            .map(|i| i as u32);
+
+        let created = todo_component
+            .property(&calcard::icalendar::ICalendarProperty::Created)
+            .and_then(|p| p.values.first())
+            .and_then(|v| v.as_partial_date_time())
+            .and_then(|d| d.to_date_time_with_tz(calcard::common::timezone::Tz::UTC))
+            .map(|dt| dt.with_timezone(&Utc));
+
+        let last_modified = todo_component
+            .property(&calcard::icalendar::ICalendarProperty::LastModified)
+            .and_then(|p| p.values.first())
+            .and_then(|v| v.as_partial_date_time())
+            .and_then(|d| d.to_date_time_with_tz(calcard::common::timezone::Tz::UTC))
+            .map(|dt| dt.with_timezone(&Utc));
+
+        let location = todo_component
+            .property(&calcard::icalendar::ICalendarProperty::Location)
+            .and_then(|p| p.values.first())
+            .and_then(|v| v.as_text())
+            .filter(|s| !s.is_empty())
+            .map(|s| s.to_string());
+
+        let url = todo_component
+            .property(&calcard::icalendar::ICalendarProperty::Url)
+            .and_then(|p| p.values.first())
+            .and_then(|v| v.as_text())
+            .filter(|s| !s.is_empty())
+            .map(|s| s.to_string());
+
+        let class = todo_component
+            .property(&calcard::icalendar::ICalendarProperty::Class)
+            .and_then(|p| p.values.first())
+            .and_then(|v| v.as_text())
+            .filter(|s| !s.is_empty())
+            .map(|s| s.to_string());
+
         Ok(Task {
             summary,
             description,
@@ -180,6 +251,15 @@ impl FromStr for Task {
             completed_date,
             status,
             uid: uid.to_string(),
+            start_date,
+            priority,
+            categories,
+            percent_complete,
+            created,
+            last_modified,
+            location,
+            url,
+            class,
         })
     }
 }
@@ -301,6 +381,15 @@ END:VCALENDAR"#;
             due_date: None,
             completed_date: None,
             status: "NEEDS-ACTION".to_string(),
+            start_date: None,
+            priority: None,
+            categories: vec![],
+            percent_complete: None,
+            created: None,
+            last_modified: None,
+            location: None,
+            url: None,
+            class: None,
         };
 
         let json = task.to_json();
@@ -344,7 +433,8 @@ UID:special-chars-task
 SUMMARY:Fix bug #12345 @urgent !!! & handle < > " ' characters
 DESCRIPTION:Task involves: \n- HTML tags: <div class="test">\n- Quotes: "double" & 'single'\n- Symbols: @#$%^&*()+={}[]|\\:;?/>.<,~`
 DUE:20240715T235959Z
-PRIORITY:1
+CATEGORIES:Urgent,Bug,Development
+LOCATION:Development Office
 END:VTODO
 END:VCALENDAR"#;
 
@@ -362,6 +452,58 @@ END:VCALENDAR"#;
             .unwrap()
             .contains("\"double\" & 'single'"));
         assert!(task.description.as_ref().unwrap().contains("@#$%^&*()"));
-        // Note: categories are not currently stored in Task struct
+
+        // Test categories field that now works
+        assert_eq!(task.categories.len(), 3);
+        assert!(task.categories.contains(&"Urgent".to_string()));
+        assert!(task.categories.contains(&"Bug".to_string()));
+        assert!(task.categories.contains(&"Development".to_string()));
+
+        // Test location field that now works
+        assert_eq!(task.location, Some("Development Office".to_string()));
+    }
+
+    #[test]
+    fn test_task_with_all_fields() {
+        let ical_data = r#"BEGIN:VCALENDAR
+VERSION:2.0
+PRODID:-//Test//Test//EN
+BEGIN:VTODO
+UID:extended-task-123
+SUMMARY:Extended Task
+DESCRIPTION:Task with categories and start date
+DTSTART:20240710T090000Z
+DUE:20240715T170000Z
+CATEGORIES:Work,Important
+STATUS:IN-PROCESS
+PRIORITY:2
+PERCENT-COMPLETE:25
+CREATED:20240701T080000Z
+LAST-MODIFIED:20240705T120000Z
+LOCATION:Office Building A
+URL:https://example.com/task
+CLASS:PRIVATE
+END:VTODO
+END:VCALENDAR"#;
+
+        let task = Task::from_str(ical_data).unwrap();
+
+        assert_eq!(task.uid, "extended-task-123");
+        assert_eq!(task.summary, Some("Extended Task".to_string()));
+        assert!(task.start_date.is_some());
+        assert!(task.due_date.is_some());
+        assert_eq!(task.categories.len(), 2);
+        assert!(task.categories.contains(&"Work".to_string()));
+        assert!(task.categories.contains(&"Important".to_string()));
+        assert_eq!(task.status, "IN-PROCESS");
+
+        // Test all the additional fields that should work
+        assert_eq!(task.priority, Some(2));
+        assert_eq!(task.percent_complete, Some(25));
+        assert!(task.created.is_some());
+        assert!(task.last_modified.is_some());
+        assert_eq!(task.location, Some("Office Building A".to_string()));
+        assert_eq!(task.url, Some("https://example.com/task".to_string()));
+        assert_eq!(task.class, Some("PRIVATE".to_string()));
     }
 }

@@ -11,6 +11,18 @@ pub struct Event {
     pub start_time: Option<DateTime<Utc>>,
     pub end_time: Option<DateTime<Utc>>,
     pub uid: String,
+    pub location: Option<String>,
+    pub categories: Vec<String>,
+    pub priority: Option<u32>,
+    pub organizer: Option<String>,
+    pub attendees: Vec<String>,
+    pub status: Option<String>,
+    pub transparency: Option<String>, // OPAQUE/TRANSPARENT
+    pub class: Option<String>,        // PUBLIC/PRIVATE/CONFIDENTIAL
+    pub created: Option<DateTime<Utc>>,
+    pub last_modified: Option<DateTime<Utc>>,
+    pub url: Option<String>,
+    pub rrule: Option<String>, // Recurrence rule
 }
 
 impl Event {
@@ -143,12 +155,111 @@ impl FromStr for Event {
             .and_then(|d| d.to_date_time_with_tz(calcard::common::timezone::Tz::UTC))
             .map(|dt| dt.with_timezone(&Utc));
 
+        let location = event_component
+            .property(&calcard::icalendar::ICalendarProperty::Location)
+            .and_then(|p| p.values.first())
+            .and_then(|v| v.as_text())
+            .filter(|s| !s.is_empty())
+            .map(|s| s.to_string());
+
+        let categories: Vec<String> = event_component
+            .properties(&calcard::icalendar::ICalendarProperty::Categories)
+            .flat_map(|p| &p.values)
+            .filter_map(|v| v.as_text())
+            .filter(|s| !s.is_empty())
+            .map(|s| s.to_string())
+            .collect();
+
+        let priority = event_component
+            .property(&calcard::icalendar::ICalendarProperty::Priority)
+            .and_then(|p| p.values.first())
+            .and_then(|v| v.as_integer())
+            .map(|i| i as u32);
+
+        let organizer = event_component
+            .property(&calcard::icalendar::ICalendarProperty::Organizer)
+            .and_then(|p| p.values.first())
+            .and_then(|v| v.as_text())
+            .filter(|s| !s.is_empty())
+            .map(|s| s.to_string());
+
+        let attendees: Vec<String> = event_component
+            .properties(&calcard::icalendar::ICalendarProperty::Attendee)
+            .flat_map(|p| &p.values)
+            .filter_map(|v| v.as_text())
+            .filter(|s| !s.is_empty())
+            .map(|s| s.to_string())
+            .collect();
+
+        let status = event_component
+            .property(&calcard::icalendar::ICalendarProperty::Status)
+            .and_then(|p| p.values.first())
+            .and_then(|v| v.as_text())
+            .filter(|s| !s.is_empty())
+            .map(|s| s.to_string());
+
+        let transparency = event_component
+            .property(&calcard::icalendar::ICalendarProperty::Transp)
+            .and_then(|p| p.values.first())
+            .and_then(|v| v.as_text())
+            .filter(|s| !s.is_empty())
+            .map(|s| s.to_string());
+
+        let class = event_component
+            .property(&calcard::icalendar::ICalendarProperty::Class)
+            .and_then(|p| p.values.first())
+            .and_then(|v| v.as_text())
+            .filter(|s| !s.is_empty())
+            .map(|s| s.to_string());
+
+        let created = event_component
+            .property(&calcard::icalendar::ICalendarProperty::Created)
+            .and_then(|p| p.values.first())
+            .and_then(|v| v.as_partial_date_time())
+            .and_then(|d| d.to_date_time_with_tz(calcard::common::timezone::Tz::UTC))
+            .map(|dt| dt.with_timezone(&Utc));
+
+        let last_modified = event_component
+            .property(&calcard::icalendar::ICalendarProperty::LastModified)
+            .and_then(|p| p.values.first())
+            .and_then(|v| v.as_partial_date_time())
+            .and_then(|d| d.to_date_time_with_tz(calcard::common::timezone::Tz::UTC))
+            .map(|dt| dt.with_timezone(&Utc));
+
+        let url = event_component
+            .property(&calcard::icalendar::ICalendarProperty::Url)
+            .and_then(|p| p.values.first())
+            .and_then(|v| v.as_text())
+            .filter(|s| !s.is_empty())
+            .map(|s| s.to_string());
+
+        let rrule = event_component
+            .property(&calcard::icalendar::ICalendarProperty::Rrule)
+            .and_then(|p| p.values.first())
+            .and_then(|v| match v {
+                calcard::icalendar::ICalendarValue::RecurrenceRule(rule) => Some(rule.to_string()),
+                _ => None,
+            })
+            .filter(|s| !s.is_empty());
+
         Ok(Event {
             summary,
             description,
             start_time,
             end_time,
             uid: uid.to_string(),
+            location,
+            categories,
+            priority,
+            organizer,
+            attendees,
+            status,
+            transparency,
+            class,
+            created,
+            last_modified,
+            url,
+            rrule,
         })
     }
 }
@@ -249,6 +360,18 @@ END:VCALENDAR"#;
             description: None,
             start_time: None,
             end_time: None,
+            location: None,
+            categories: vec![],
+            priority: None,
+            organizer: None,
+            attendees: vec![],
+            status: None,
+            transparency: None,
+            class: None,
+            created: None,
+            last_modified: None,
+            url: None,
+            rrule: None,
         };
 
         let json = event.to_json();
@@ -337,6 +460,8 @@ DTSTART:20240710T100000Z
 DTEND:20240710T110000Z
 SUMMARY:Meeting with José María Aznar in café 北京
 DESCRIPTION:Discussing 中文 project with François and Müller. Price: €500.
+LOCATION:Café 北京, Paris
+CATEGORIES:Business,International
 END:VEVENT
 END:VCALENDAR"#;
 
@@ -351,8 +476,14 @@ END:VCALENDAR"#;
             event.description,
             Some("Discussing 中文 project with François and Müller. Price: €500.".to_string())
         );
-        // Note: location and categories are not currently stored in Event
-        // struct
+
+        // Test location field that now works
+        assert_eq!(event.location, Some("Café 北京, Paris".to_string()));
+
+        // Test categories field that now works
+        assert_eq!(event.categories.len(), 2);
+        assert!(event.categories.contains(&"Business".to_string()));
+        assert!(event.categories.contains(&"International".to_string()));
     }
 
     #[test]
@@ -379,7 +510,9 @@ END:VCALENDAR"#;
         );
         assert!(event.description.as_ref().unwrap().contains("Multi-line"));
         assert!(event.description.as_ref().unwrap().contains("tabs"));
-        // Note: location field not stored in Event struct
+
+        // Location field is now supported but not present in this test data
+        assert_eq!(event.location, None);
     }
 
     #[test]
@@ -403,6 +536,66 @@ END:VCALENDAR"#;
         assert!(event.summary.as_ref().unwrap().contains("backslashes"));
         assert!(event.description.as_ref().unwrap().contains("\\backslash"));
         assert!(event.description.as_ref().unwrap().contains(";semicolon"));
-        // Note: location field not stored in Event struct
+
+        // Location field is now supported but not present in this test data
+        assert_eq!(event.location, None);
+    }
+
+    #[test]
+    fn test_event_with_all_fields() {
+        let ical_data = r#"BEGIN:VCALENDAR
+VERSION:2.0
+PRODID:-//Test//Test//EN
+BEGIN:VEVENT
+UID:extended-event-123
+DTSTART:20240710T100000Z
+DTEND:20240710T110000Z
+SUMMARY:Extended Event
+DESCRIPTION:Event with location and categories
+LOCATION:Conference Room A
+CATEGORIES:Business,Meeting
+PRIORITY:3
+ORGANIZER:MAILTO:organizer@example.com
+ATTENDEE:MAILTO:attendee1@example.com
+ATTENDEE:MAILTO:attendee2@example.com
+STATUS:CONFIRMED
+TRANSP:OPAQUE
+CLASS:PUBLIC
+CREATED:20240701T080000Z
+LAST-MODIFIED:20240705T120000Z
+URL:https://example.com/event
+RRULE:FREQ=WEEKLY;COUNT=4
+END:VEVENT
+END:VCALENDAR"#;
+
+        let event = Event::from_str(ical_data).unwrap();
+
+        assert_eq!(event.uid, "extended-event-123");
+        assert_eq!(event.summary, Some("Extended Event".to_string()));
+        assert_eq!(event.location, Some("Conference Room A".to_string()));
+        assert_eq!(event.categories.len(), 2);
+        assert!(event.categories.contains(&"Business".to_string()));
+        assert!(event.categories.contains(&"Meeting".to_string()));
+
+        // Test all the additional fields that should work
+        assert_eq!(event.priority, Some(3));
+        assert_eq!(
+            event.organizer,
+            Some("MAILTO:organizer@example.com".to_string())
+        );
+        assert_eq!(event.attendees.len(), 2);
+        assert!(event
+            .attendees
+            .contains(&"MAILTO:attendee1@example.com".to_string()));
+        assert!(event
+            .attendees
+            .contains(&"MAILTO:attendee2@example.com".to_string()));
+        assert_eq!(event.status, Some("CONFIRMED".to_string()));
+        assert_eq!(event.transparency, Some("OPAQUE".to_string()));
+        assert_eq!(event.class, Some("PUBLIC".to_string()));
+        assert!(event.created.is_some());
+        assert!(event.last_modified.is_some());
+        assert_eq!(event.url, Some("https://example.com/event".to_string()));
+        assert_eq!(event.rrule, Some("FREQ=WEEKLY;COUNT=4".to_string()));
     }
 }
