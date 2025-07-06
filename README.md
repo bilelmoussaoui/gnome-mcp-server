@@ -2,22 +2,22 @@
 
 Grant the AI octopus access to a portion of your desktop with a Model Context Protocol (MCP) server for the GNOME desktop.
 
-## Building
+## Installation
 
-To build the project, simply use:
+To build and install the MCP server to your system:
 
 ```bash
-cargo build
+cargo install --path .
 ```
 
-This will produce a debug binary under `target/debug/gnome-mcp-server`.
+The resulting binary will typically be under `~/.cargo/bin/gnome-mcp-server`.
 
 ## Usage
 
 To use this MCP server, you need to configure an MCP client. The configuration varies slightly from client to client, but this is the information that you will need:
 - Transport: `stdio`
-- Command: `/path/to/gnome-mcp-server/target/debug/gnome-mcp-server`
-- Args: `[]` (empty)
+- Command: `gnome-mcp-server` (assuming `~/.cargo/bin` is in your PATH)
+- Args: `[]` (empty list)
 
 ## Clients
 
