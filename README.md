@@ -12,6 +12,22 @@ cargo build
 
 This will produce a debug binary under `target/debug/gnome-mcp-server`.
 
+## Usage
+
+To use this MCP server, you need to configure an MCP client. The following is a list of general-purpose MCP clients known to work on Linux (in alphabetical order):
+
+| Name | Description | Open Source | Local LLM Support | Documentation |
+|------|-------------|-------------|-------------------|---------------|
+| [goose](https://github.com/block/goose) | AI agent by Block (creators of Square) | ✅ | ✅ | [Docs](https://block.github.io/goose/docs/getting-started/using-extensions) |
+| [LM Studio](https://lmstudio.ai/) | Desktop app for running local LLMs | ❌ | ✅ | [Docs](https://lmstudio.ai/docs/app/plugins/mcp) |
+| [Speed of Light](https://github.com/zugaldia/speedoflight) | Native GNOME MCP client | ✅ | ✅ | [Docs](https://github.com/zugaldia/speedoflight/blob/main/README.md) |
+
+> **Know of other MCP clients that work on Linux?** Please submit a PR to add them to this table.
+
+Coding-specific agents like Claude Code, OpenAI Codex, Gemini CLI, VS Code Copilot, or Cursor also support MCP, but they typically rely on cloud models and have limited or no support for on-device LLMs.
+
+For additional MCP clients, see [this section](https://modelcontextprotocol.io/clients) in the official documentation.
+
 ## Configuration
 
 By default, all tools and resources are enabled. Create a configuration file to customize behavior:
