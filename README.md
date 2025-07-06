@@ -2,6 +2,16 @@
 
 Grant the AI octopus access to a portion of your desktop with a Model Context Protocol (MCP) server for the GNOME desktop.
 
+## Building
+
+To build the project, simply use:
+
+```bash
+cargo build
+```
+
+This will produce a debug binary under `target/debug/gnome-mcp-server`.
+
 ## Configuration
 
 By default, all tools and resources are enabled. Create a configuration file to customize behavior:
