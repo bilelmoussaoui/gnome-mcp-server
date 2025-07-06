@@ -14,7 +14,14 @@ This will produce a debug binary under `target/debug/gnome-mcp-server`.
 
 ## Usage
 
-To use this MCP server, you need to configure an MCP client. The following is a list of general-purpose MCP clients known to work on Linux (in alphabetical order):
+To use this MCP server, you need to configure an MCP client. The configuration varies slightly from client to client, but this is the information that you will need:
+- Transport: `stdio`
+- Command: `/path/to/gnome-mcp-server/target/debug/gnome-mcp-server`
+- Args: `[]` (empty)
+
+## Clients
+
+The following is a list of general-purpose MCP clients known to work on Linux (in alphabetical order):
 
 | Name | Description | Open Source | Local LLM Support | Documentation |
 |------|-------------|-------------|-------------------|---------------|
