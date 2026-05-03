@@ -22,12 +22,6 @@ highlight = "all"
 # List of crates that are allowed. Use with care!
 allow = []
 skip = [
-    # Skip older regex-automata version (keep 0.4.9, skip 0.1.10)
-    {name = "regex-automata", version = "0.1.10"},
-
-    # Skip older regex-syntax version (keep 0.8.5, skip 0.6.29)
-    {name = "regex-syntax", version = "0.6.29"},
-
     # Skip older wasi version (keep 0.14.2, skip 0.11.1)
     {name = "wasi", version = "0.11.1+wasi-snapshot-preview1"},
 
