@@ -27,6 +27,7 @@ The following is a list of general-purpose MCP clients known to work on Linux (i
 |------|-------------|-------------|-------------------|---------------|
 | [goose](https://github.com/block/goose) | AI agent by Block (creators of Square) | ✅ | ✅ | [Docs](https://block.github.io/goose/docs/getting-started/using-extensions) |
 | [LM Studio](https://lmstudio.ai/) | Desktop app for running local LLMs | ❌ | ✅ | [Docs](https://lmstudio.ai/docs/app/plugins/mcp) |
+| [Newelle](https://github.com/qwersyk/Newelle) | AI Assistant for Linux | ✅ | ✅ | [Docs](https://github.com/qwersyk/Newelle/wiki/Desktop-Automation#gnome) |
 | [Speed of Light](https://github.com/zugaldia/speedoflight) | Native GNOME MCP client | ✅ | ✅ | [Docs](https://github.com/zugaldia/speedoflight/blob/main/README.md) |
 
 > **Know of other MCP clients that work on Linux?** Please submit a PR to add them to this table.
