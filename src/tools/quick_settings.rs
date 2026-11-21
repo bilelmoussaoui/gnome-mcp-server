@@ -8,7 +8,7 @@ pub struct QuickSettings;
 
 tool_params! {
     QuickSettingsParams,
-    required(setting: string, "Which boolean setting to toggle. Supported options: wifi/bluetooth/night_light/do_not_disturb/dark_style"),
+    required(setting: string, "Which boolean setting to toggle. Supported options: wifi/bluetooth/airplane_mode/night_light/do_not_disturb/dark_style"),
     required(enabled: bool, "true to enable, false to disable the setting")
 }
 
@@ -27,6 +27,7 @@ async fn execute_boolean_toggle(setting: &str, enabled: bool) -> Result<String> 
     match setting {
         "wifi" => toggle_wifi(enabled).await,
         "bluetooth" => toggle_bluetooth(enabled).await,
+        "airplane_mode" => toggle_airplane_mode(enabled).await,
         "night_light" => toggle_night_light(enabled).await,
         "do_not_disturb" => toggle_do_not_disturb(enabled).await,
         "dark_style" => toggle_dark_style(enabled).await,
@@ -53,21 +54,43 @@ async fn toggle_wifi(enabled: bool) -> Result<String> {
     ))
 }
 
-async fn toggle_bluetooth(enabled: bool) -> Result<String> {
-    let connection = zbus::Connection::system().await?;
+/// Returns a proxy to the GNOME SettingsDaemon rfkill service, which
+/// manages airplane mode and per-radio rfkill state (this is also what
+/// GNOME Shell's quick settings use).
+async fn rfkill_proxy() -> Result<zbus::Proxy<'static>> {
+    let connection = zbus::Connection::session().await?;
 
-    let adapter_proxy = zbus::Proxy::new(
+    Ok(zbus::Proxy::new(
         &connection,
-        "org.bluez",
-        "/org/bluez/hci0",
-        "org.bluez.Adapter1",
+        "org.gnome.SettingsDaemon.Rfkill",
+        "/org/gnome/SettingsDaemon/Rfkill",
+        "org.gnome.SettingsDaemon.Rfkill",
     )
-    .await?;
+    .await?)
+}
 
-    adapter_proxy.set_property("Powered", enabled).await?;
+async fn toggle_bluetooth(enabled: bool) -> Result<String> {
+    let proxy = rfkill_proxy().await?;
+
+    // The service exposes bluetooth state as its own airplane mode,
+    // with inverted semantics (true = bluetooth turned off)
+    proxy
+        .set_property("BluetoothAirplaneMode", !enabled)
+        .await?;
 
     Ok(format!(
         "Bluetooth {}",
+        if enabled { "enabled" } else { "disabled" }
+    ))
+}
+
+async fn toggle_airplane_mode(enabled: bool) -> Result<String> {
+    let proxy = rfkill_proxy().await?;
+
+    proxy.set_property("AirplaneMode", enabled).await?;
+
+    Ok(format!(
+        "Airplane mode {}",
         if enabled { "enabled" } else { "disabled" }
     ))
 }

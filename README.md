@@ -105,7 +105,7 @@ Config:
 - **player** (string, optional): Specific player name (default: active player)
 
 #### `quick_settings`
-- **setting** (string, required): wifi, bluetooth, night_light, do_not_disturb, dark_style
+- **setting** (string, required): wifi, bluetooth, airplane_mode, night_light, do_not_disturb, dark_style
 - **enabled** (boolean, required): Enable/disable state
 
 #### `take_screenshot`
