@@ -103,6 +103,9 @@ pub struct ScreenshotConfig {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
+pub struct PickColorConfig {}
+
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct WindowManagementConfig {}
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
@@ -141,6 +144,7 @@ pub struct ToolsConfig {
     pub audio: Option<AudioToolConfig>,
     pub quick_settings: Option<QuickSettingsConfig>,
     pub screenshot: Option<ScreenshotConfig>,
+    pub pick_color: Option<PickColorConfig>,
     pub window_management: Option<WindowManagementConfig>,
     pub keyring: Option<KeyringConfig>,
 }
@@ -155,6 +159,7 @@ impl Default for ToolsConfig {
             audio: Some(AudioToolConfig::default()),
             quick_settings: Some(QuickSettingsConfig::default()),
             screenshot: Some(ScreenshotConfig::default()),
+            pick_color: Some(PickColorConfig::default()),
             window_management: Some(WindowManagementConfig::default()),
             keyring: Some(KeyringConfig::default()),
         }
@@ -233,6 +238,7 @@ impl Config {
                 self.tools.quick_settings.is_some()
             }
             crate::tools::screenshot::Screenshot::NAME => self.tools.screenshot.is_some(),
+            crate::tools::pick_color::PickColor::NAME => self.tools.pick_color.is_some(),
             crate::tools::window_management::WindowManagement::NAME => {
                 self.tools.window_management.is_some()
             }

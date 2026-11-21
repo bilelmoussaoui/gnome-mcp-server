@@ -118,6 +118,11 @@ Config:
 }
 ```
 
+#### `pick_color`
+- No parameters
+- Prompts the user to click on a pixel to capture its color
+- Returns the color as a hex string, RGB values (0-255) and normalized RGB values (0.0-1.0)
+
 #### `window_management`
 - **action** (string, required): list, focus, close, minimize, maximize, switch_workspace, move_to_workspace, get_geometry, set_geometry, set_position, set_size, snap
 - **window_id** (string, optional): Window ID for window-specific actions
