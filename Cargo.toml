@@ -3,15 +3,15 @@ name = "gnome-mcp-server"
 version = "0.1.0"
 edition = "2021"
 license = "MIT"
-rust-version = "1.80"
+rust-version = "1.95"
 
 [dependencies]
 anyhow = "1.0"
-ashpd = "0.11"
+ashpd = { version = "0.14", features = ["notification", "screenshot", "wallpaper"] }
 calcard = "0.1"
 chrono = { version = "0.4", features = ["serde"] }
 gio = "0.20"
-oo7 = "0.4"
+oo7 = "0.7"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 tokio = { version = "1.0", features = ["full"] }

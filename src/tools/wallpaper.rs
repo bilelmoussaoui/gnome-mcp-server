@@ -66,8 +66,10 @@ fn validate_image_file(image_path: &str) -> Result<()> {
 }
 
 async fn set_wallpaper(image_uri: &str) -> Result<()> {
+    let uri = ashpd::Uri::parse(image_uri)
+        .map_err(|e| anyhow::anyhow!("Invalid image URI {}: {}", image_uri, e))?;
     ashpd::desktop::wallpaper::WallpaperRequest::default()
-        .build_uri(&ashpd::url::Url::parse(image_uri).unwrap())
+        .build_uri(&uri)
         .await?
         .response()?;
     Ok(())
